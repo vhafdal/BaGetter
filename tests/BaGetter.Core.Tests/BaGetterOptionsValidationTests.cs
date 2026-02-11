@@ -1,4 +1,6 @@
 using Microsoft.Extensions.Options;
+using System;
+using System.Collections.Generic;
 using Xunit;
 
 namespace BaGetter.Core.Tests;
@@ -105,5 +107,77 @@ public class BaGetterOptionsValidationTests
 
         Assert.True(result.Failed);
         Assert.Contains(result.Failures, f => f.Contains(nameof(BaGetterOptions.SecurityHeaders)));
+    }
+
+    [Fact]
+    public void GetConfiguredMirrors_ShouldPreferMirrorsCollection()
+    {
+        var options = new BaGetterOptions
+        {
+            Mirror = new MirrorOptions
+            {
+                Enabled = true,
+                PackageSource = new Uri("https://single.example/v3/index.json")
+            },
+            Mirrors = new List<MirrorOptions>
+            {
+                new()
+                {
+                    Enabled = true,
+                    PackageSource = new Uri("https://first.example/v3/index.json")
+                },
+                new()
+                {
+                    Enabled = true,
+                    PackageSource = new Uri("https://second.example/v3/index.json")
+                }
+            }
+        };
+
+        var mirrors = options.GetConfiguredMirrors();
+
+        Assert.Equal(2, mirrors.Count);
+        Assert.Equal(new Uri("https://first.example/v3/index.json"), mirrors[0].PackageSource);
+        Assert.Equal(new Uri("https://second.example/v3/index.json"), mirrors[1].PackageSource);
+    }
+
+    [Fact]
+    public void GetConfiguredMirrors_ShouldFallbackToMirror()
+    {
+        var options = new BaGetterOptions
+        {
+            Mirror = new MirrorOptions
+            {
+                Enabled = true,
+                PackageSource = new Uri("https://single.example/v3/index.json")
+            }
+        };
+
+        var mirrors = options.GetConfiguredMirrors();
+
+        Assert.Single(mirrors);
+        Assert.Equal(new Uri("https://single.example/v3/index.json"), mirrors[0].PackageSource);
+    }
+
+    [Fact]
+    public void Validate_ShouldFail_WhenMirrorInMirrorsIsInvalid()
+    {
+        var validator = new ValidateBaGetterOptions<BaGetterOptions>(optionsName: null);
+        var options = new BaGetterOptions
+        {
+            Mirrors = new List<MirrorOptions>
+            {
+                new()
+                {
+                    Enabled = true,
+                    PackageSource = null
+                }
+            }
+        };
+
+        var result = validator.Validate(Options.DefaultName, options);
+
+        Assert.True(result.Failed);
+        Assert.Contains(result.Failures, f => f.Contains("Mirrors[0]"));
     }
 }

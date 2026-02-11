@@ -173,6 +173,30 @@ The following `Mirror` setting configures BaGetter to index packages from [nuget
   </TabItem>
 </Tabs>
 
+You can also configure multiple upstream mirrors using `Mirrors`.
+When `Mirrors` is present and contains one or more entries, it takes precedence over `Mirror`.
+BaGetter will try mirrors in order and fall back to the next mirror when a package is not found.
+If `Mirrors` is absent or empty, BaGetter uses the legacy `Mirror` setting.
+
+```json
+{
+    ...
+
+    "Mirrors": [
+        {
+            "Enabled": true,
+            "PackageSource": "https://api.nuget.org/v3/index.json"
+        },
+        {
+            "Enabled": true,
+            "PackageSource": "https://your-secondary-feed/v3/index.json"
+        }
+    ],
+
+    ...
+}
+```
+
 
 :::info
 

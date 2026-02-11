@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using BaGetter.Core.Configuration;
 
 namespace BaGetter.Core;
@@ -77,6 +78,12 @@ public class BaGetterOptions : IValidatableObject
 
     public MirrorOptions Mirror { get; set; }
 
+    /// <summary>
+    /// Multiple mirrors to use for read-through caching. When this list is set and non-empty,
+    /// it takes precedence over <see cref="Mirror"/>.
+    /// </summary>
+    public IList<MirrorOptions> Mirrors { get; set; }
+
     public HealthCheckOptions HealthCheck { get; set; }
 
     public StatisticsOptions Statistics { get; set; }
@@ -140,5 +147,49 @@ public class BaGetterOptions : IValidatableObject
                 $"{nameof(SecurityHeaders)}.{nameof(SecurityHeadersOptions.EnableHsts)} requires {nameof(SecurityHeaders)}.{nameof(SecurityHeadersOptions.Enabled)} to be true.",
                 new[] { nameof(SecurityHeaders) });
         }
+
+        var mirrors = GetConfiguredMirrors();
+        var useMirrorList = Mirrors is { Count: > 0 };
+        for (var i = 0; i < mirrors.Count; i++)
+        {
+            var mirror = mirrors[i];
+            var prefix = useMirrorList ? $"{nameof(Mirrors)}[{i}]" : nameof(Mirror);
+
+            if (mirror == null)
+            {
+                yield return new ValidationResult(
+                    $"{prefix} must not be null.",
+                    [prefix]);
+                continue;
+            }
+
+            var mirrorValidationResults = new List<ValidationResult>();
+            Validator.TryValidateObject(
+                mirror,
+                new ValidationContext(mirror),
+                mirrorValidationResults,
+                validateAllProperties: true);
+
+            foreach (var validationResult in mirrorValidationResults)
+            {
+                var members = validationResult.MemberNames?.Any() == true
+                    ? validationResult.MemberNames.Select(m => $"{prefix}.{m}")
+                    : [prefix];
+
+                yield return new ValidationResult(
+                    $"{prefix}: {validationResult.ErrorMessage}",
+                    members);
+            }
+        }
+    }
+
+    public IReadOnlyList<MirrorOptions> GetConfiguredMirrors()
+    {
+        if (Mirrors is { Count: > 0 })
+        {
+            return Mirrors.ToList();
+        }
+
+        return Mirror == null ? Array.Empty<MirrorOptions>() : [Mirror];
     }
 }
