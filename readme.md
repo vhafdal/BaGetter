@@ -52,6 +52,10 @@ For more information, please refer to the [documentation].
 * **ARM** (64bit) **support**. You can host your NuGets on a device like Raspberry Pi!
 * **Cloud native**: supports [Docker][Docker doc link], [AWS][AWS doc link], [Google Cloud][GCP doc link], [Alibaba Cloud][Aliyun doc link]，[Tencent Cloud][Tencent doc link]
 * **Offline support**: [Mirror a NuGet server][Read through caching] to speed up builds and enable offline downloads
+* **Operational readiness**: supports ETag-based HTTP caching, response compression, request rate limiting, security headers, and audit logging for package mutations
+* **Search recovery tooling**: supports manual and background search reindexing
+
+For deployment checks and troubleshooting workflows, see the [Operations Playbook][Operations Playbook].
 
 ## 🤝 Contributing
 
@@ -92,6 +96,7 @@ Thanks to everyone who helps to make BaGetter better!
 [BaGetter's latest release]: https://github.com/bagetter/BaGetter/releases
 
 [Documentation]: https://www.bagetter.com/
+[Operations Playbook]: https://www.bagetter.com/docs/Advanced/operations-playbook
 [Read through caching]: https://www.bagetter.com/docs/configuration#enable-read-through-caching
 [AWS doc link]: https://www.bagetter.com/docs/Installation/aws
 [GCP doc link]: https://www.bagetter.com/docs/Installation/gcp

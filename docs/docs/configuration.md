@@ -16,6 +16,18 @@ You can override the configuration root path using:
 BAGET_CONFIG_ROOT
 ```
 
+## Startup validation rules
+
+BaGetter validates configuration at startup and fails fast when critical settings are invalid. Current guardrails include:
+
+- `MaxPackageSizeGiB` must be greater than `0`.
+- `PathBase` must start with `/` and must not end with `/` (except `/` itself).
+- `Cors.AllowAnyOrigin=true` cannot be combined with `Cors.AllowCredentials=true`.
+- If `Cors.AllowAnyOrigin=false`, then `Cors.AllowedOrigins` must contain at least one value.
+- `SecurityHeaders.EnableHsts=true` requires `SecurityHeaders.Enabled=true`.
+
+These checks help catch unsafe or inconsistent runtime settings before serving traffic.
+
 ## Require an API key
 
 You can require that users provide a password, called an API key, to publish packages.
