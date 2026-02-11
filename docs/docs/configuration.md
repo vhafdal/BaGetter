@@ -647,6 +647,24 @@ If you set `ListConfiguredServices` to `false` the currently used services for d
 }
 ```
 
+## Web UI theming
+
+BaGetter's built-in UI can be restyled by editing:
+
+- `src/BaGetter.Web/wwwroot/css/site.css`
+
+The stylesheet uses CSS custom properties in `:root` for the visual system. The most important tokens are:
+
+- `--font-body`, `--font-heading`
+- `--page-bg`, `--page-text`, `--surface`, `--surface-border`
+- `--brand-primary`, `--brand-accent`, `--brand-highlight`
+- `--link-color`, `--link-hover`
+- `--radius-sm`, `--radius-md`, `--radius-lg`
+
+There is also a `@media (prefers-color-scheme: dark)` block for dark-mode values.
+
+If you need different branding, you can safely override these tokens while keeping the component selectors unchanged.
+
 
 
 ## Load secrets from files

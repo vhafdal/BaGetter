@@ -122,7 +122,6 @@ public static partial class DependencyInjectionExtensions
         });
         services.TryAddTransient<V3UpstreamClient>();
         services.TryAddTransient<DisabledUpstreamClient>();
-        services.TryAddTransient<FallbackUpstreamClient>();
         services.TryAddSingleton<NullStorageService>();
         services.TryAddTransient<PackageDatabase>();
 
