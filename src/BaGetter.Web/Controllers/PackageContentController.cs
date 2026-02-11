@@ -42,10 +42,12 @@ public class PackageContentController : Controller
         if (HttpCacheUtility.MatchesIfNoneMatch(Request, etag))
         {
             HttpCacheUtility.SetEtag(Response, etag);
+            HttpCacheUtility.SetMustRevalidate(Response);
             return StatusCode(StatusCodes.Status304NotModified);
         }
 
         HttpCacheUtility.SetEtag(Response, etag);
+        HttpCacheUtility.SetMustRevalidate(Response);
         return versions;
     }
 
@@ -67,6 +69,7 @@ public class PackageContentController : Controller
         if (HttpCacheUtility.MatchesIfNoneMatch(Request, etag))
         {
             HttpCacheUtility.SetEtag(Response, etag);
+            HttpCacheUtility.SetImmutable(Response);
             return StatusCode(StatusCodes.Status304NotModified);
         }
 
@@ -77,6 +80,7 @@ public class PackageContentController : Controller
         }
 
         HttpCacheUtility.SetEtag(Response, etag);
+        HttpCacheUtility.SetImmutable(Response);
         return File(packageStream, "application/octet-stream");
     }
 
@@ -91,6 +95,7 @@ public class PackageContentController : Controller
         if (HttpCacheUtility.MatchesIfNoneMatch(Request, etag))
         {
             HttpCacheUtility.SetEtag(Response, etag);
+            HttpCacheUtility.SetImmutable(Response);
             return StatusCode(StatusCodes.Status304NotModified);
         }
 
@@ -101,6 +106,7 @@ public class PackageContentController : Controller
         }
 
         HttpCacheUtility.SetEtag(Response, etag);
+        HttpCacheUtility.SetImmutable(Response);
         return File(nuspecStream, "text/xml");
     }
 
@@ -115,6 +121,7 @@ public class PackageContentController : Controller
         if (HttpCacheUtility.MatchesIfNoneMatch(Request, etag))
         {
             HttpCacheUtility.SetEtag(Response, etag);
+            HttpCacheUtility.SetImmutable(Response);
             return StatusCode(StatusCodes.Status304NotModified);
         }
 
@@ -125,6 +132,7 @@ public class PackageContentController : Controller
         }
 
         HttpCacheUtility.SetEtag(Response, etag);
+        HttpCacheUtility.SetImmutable(Response);
         return File(readmeStream, "text/markdown");
     }
 
@@ -139,6 +147,7 @@ public class PackageContentController : Controller
         if (HttpCacheUtility.MatchesIfNoneMatch(Request, etag))
         {
             HttpCacheUtility.SetEtag(Response, etag);
+            HttpCacheUtility.SetImmutable(Response);
             return StatusCode(StatusCodes.Status304NotModified);
         }
 
@@ -153,6 +162,7 @@ public class PackageContentController : Controller
         var iconBytes = bufferedStream.ToArray();
 
         HttpCacheUtility.SetEtag(Response, etag);
+        HttpCacheUtility.SetImmutable(Response);
         return File(iconBytes, DetectImageContentType(iconBytes));
     }
 

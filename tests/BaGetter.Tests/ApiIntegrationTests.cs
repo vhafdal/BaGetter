@@ -326,11 +326,21 @@ public class ApiIntegrationTests : IDisposable
         var etag = firstResponse.Headers.ETag?.Tag;
         Assert.False(string.IsNullOrWhiteSpace(etag));
 
+        var firstCacheControl = firstResponse.Headers.CacheControl?.ToString() ?? string.Empty;
+        Assert.Contains("public", firstCacheControl, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("max-age=0", firstCacheControl, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("must-revalidate", firstCacheControl, StringComparison.OrdinalIgnoreCase);
+
         using var request = new HttpRequestMessage(HttpMethod.Get, "v3/registration/TestData/index.json");
         request.Headers.TryAddWithoutValidation("If-None-Match", etag);
 
         using var secondResponse = await _client.SendAsync(request);
         Assert.Equal(HttpStatusCode.NotModified, secondResponse.StatusCode);
+
+        var secondCacheControl = secondResponse.Headers.CacheControl?.ToString() ?? string.Empty;
+        Assert.Contains("public", secondCacheControl, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("max-age=0", secondCacheControl, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("must-revalidate", secondCacheControl, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -505,11 +515,21 @@ public class ApiIntegrationTests : IDisposable
         var etag = firstResponse.Headers.ETag?.Tag;
         Assert.False(string.IsNullOrWhiteSpace(etag));
 
+        var firstCacheControl = firstResponse.Headers.CacheControl?.ToString() ?? string.Empty;
+        Assert.Contains("public", firstCacheControl, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("max-age=31536000", firstCacheControl, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("immutable", firstCacheControl, StringComparison.OrdinalIgnoreCase);
+
         using var request = new HttpRequestMessage(HttpMethod.Get, "v3/package/TestData/1.2.3/TestData.1.2.3.nupkg");
         request.Headers.TryAddWithoutValidation("If-None-Match", etag);
 
         using var secondResponse = await _client.SendAsync(request);
         Assert.Equal(HttpStatusCode.NotModified, secondResponse.StatusCode);
+
+        var secondCacheControl = secondResponse.Headers.CacheControl?.ToString() ?? string.Empty;
+        Assert.Contains("public", secondCacheControl, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("max-age=31536000", secondCacheControl, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("immutable", secondCacheControl, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

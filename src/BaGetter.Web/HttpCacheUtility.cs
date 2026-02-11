@@ -63,6 +63,18 @@ internal static class HttpCacheUtility
         response.Headers[HeaderNames.ETag] = etag;
     }
 
+    public static void SetMustRevalidate(HttpResponse response)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        response.Headers[HeaderNames.CacheControl] = "public, max-age=0, must-revalidate";
+    }
+
+    public static void SetImmutable(HttpResponse response)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        response.Headers[HeaderNames.CacheControl] = "public, max-age=31536000, immutable";
+    }
+
     private static string NormalizeEtag(string etag)
     {
         var trimmed = etag.Trim();

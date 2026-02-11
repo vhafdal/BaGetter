@@ -41,10 +41,12 @@ public class PackageMetadataController : Controller
         if (HttpCacheUtility.MatchesIfNoneMatch(Request, etag))
         {
             HttpCacheUtility.SetEtag(Response, etag);
+            HttpCacheUtility.SetMustRevalidate(Response);
             return StatusCode(StatusCodes.Status304NotModified);
         }
 
         HttpCacheUtility.SetEtag(Response, etag);
+        HttpCacheUtility.SetMustRevalidate(Response);
         return index;
     }
 
@@ -72,10 +74,12 @@ public class PackageMetadataController : Controller
         if (HttpCacheUtility.MatchesIfNoneMatch(Request, etag))
         {
             HttpCacheUtility.SetEtag(Response, etag);
+            HttpCacheUtility.SetMustRevalidate(Response);
             return StatusCode(StatusCodes.Status304NotModified);
         }
 
         HttpCacheUtility.SetEtag(Response, etag);
+        HttpCacheUtility.SetMustRevalidate(Response);
         return page;
     }
 
@@ -98,10 +102,12 @@ public class PackageMetadataController : Controller
         if (HttpCacheUtility.MatchesIfNoneMatch(Request, etag))
         {
             HttpCacheUtility.SetEtag(Response, etag);
+            HttpCacheUtility.SetMustRevalidate(Response);
             return StatusCode(StatusCodes.Status304NotModified);
         }
 
         HttpCacheUtility.SetEtag(Response, etag);
+        HttpCacheUtility.SetMustRevalidate(Response);
         return leaf;
     }
 }
