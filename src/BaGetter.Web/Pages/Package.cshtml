@@ -22,7 +22,7 @@ else
         <aside class="col-sm-1 package-icon">
             <img src="@(Model.IconUrl ?? Url.Content("~/_content/BaGetter.Web/images/default-package-icon-256x256.png"))"
                  class="img-responsive"
-                 onerror="this.src='@Url.Content("~/_content/BaGetter.Web/images/default-package-icon-256x256.png")'"
+                 onerror="this.onerror=null;this.src='@Url.Content("~/_content/BaGetter.Web/images/default-package-icon-256x256.png")'"
                  alt="The package icon" />
         </aside>
 
