@@ -60,6 +60,33 @@ public class Program
             });
         });
 
+        app.Command("hash", hash =>
+        {
+            var valueArgument = hash.Argument("value", "The secret value to hash.");
+            var iterationsOption = hash.Option("--iterations <N>", "PBKDF2 iteration count (default: 100000).", CommandOptionType.SingleValue);
+
+            hash.OnExecute(() =>
+            {
+                if (string.IsNullOrWhiteSpace(valueArgument.Value))
+                {
+                    Console.Error.WriteLine("You must provide a value to hash.");
+                    hash.ShowHelp();
+                    return 1;
+                }
+
+                var iterations = 100_000;
+                if (iterationsOption.HasValue() &&
+                    (!int.TryParse(iterationsOption.Value(), out iterations) || iterations < 10_000))
+                {
+                    Console.Error.WriteLine("Iterations must be an integer >= 10000.");
+                    return 1;
+                }
+
+                Console.WriteLine(SecretHashing.HashSecret(valueArgument.Value, iterations));
+                return 0;
+            });
+        });
+
         app.Command("install", install =>
         {
             install.Command("service", service =>

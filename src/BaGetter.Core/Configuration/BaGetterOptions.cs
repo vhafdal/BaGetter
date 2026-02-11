@@ -15,6 +15,13 @@ public class BaGetterOptions : IValidatableObject
     public string ApiKey { get; set; }
 
     /// <summary>
+    /// Optional hash for the legacy <see cref="ApiKey"/> in format:
+    /// PBKDF2$&lt;iterations&gt;$&lt;base64Salt&gt;$&lt;base64Hash&gt;.
+    /// If set, this is used in addition to <see cref="ApiKey"/>.
+    /// </summary>
+    public string ApiKeyHash { get; set; }
+
+    /// <summary>
     /// The application root URL for usage in reverse proxy scenarios.
     /// </summary>
     public string PathBase { get; set; }

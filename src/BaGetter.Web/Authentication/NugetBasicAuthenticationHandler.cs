@@ -90,11 +90,19 @@ public class NugetBasicAuthenticationHandler : AuthenticationHandler<Authenticat
         return bagetterOptions.Value.Authentication is null ||
             bagetterOptions.Value.Authentication.Credentials is null ||
             bagetterOptions.Value.Authentication.Credentials.Length == 0 ||
-            bagetterOptions.Value.Authentication.Credentials.All(a => string.IsNullOrWhiteSpace(a.Username) && string.IsNullOrWhiteSpace(a.Password));
+            bagetterOptions.Value.Authentication.Credentials.All(a =>
+                string.IsNullOrWhiteSpace(a.Username) ||
+                (string.IsNullOrWhiteSpace(a.Password) && string.IsNullOrWhiteSpace(a.PasswordHash)));
     }
 
     private bool ValidateCredentials(string username, string password)
     {
-        return bagetterOptions.Value.Authentication.Credentials.Any(a => a.Username.Equals(username, StringComparison.OrdinalIgnoreCase) && a.Password == password);
+        return bagetterOptions.Value.Authentication.Credentials.Any(a =>
+            !string.IsNullOrWhiteSpace(a.Username) &&
+            a.Username.Equals(username, StringComparison.OrdinalIgnoreCase) &&
+            (
+                (!string.IsNullOrEmpty(a.PasswordHash) && SecretHashing.VerifySecret(password, a.PasswordHash)) ||
+                a.Password == password
+            ));
     }
 }

@@ -61,6 +61,38 @@ You can also use the `ApiKeys` array in order to manage multiple API keys for mu
 
 Both `ApiKey` and `ApiKeys` work in conjunction additively eg.: `or` `||` logical operator.
 
+You can also store hashed API keys instead of plaintext values:
+
+- `ApiKeyHash` for the legacy single key
+- `Authentication.ApiKeys[].KeyHash` for multiple keys
+
+Supported hash format:
+
+```text
+PBKDF2$<iterations>$<base64Salt>$<base64Hash>
+```
+
+Example:
+
+```json
+{
+    "ApiKeyHash": "PBKDF2$100000$<salt>$<hash>",
+    "Authentication": {
+        "ApiKeys": [
+            {
+                "KeyHash": "PBKDF2$100000$<salt>$<hash>"
+            }
+        ]
+    }
+}
+```
+
+Generate a hash from the CLI:
+
+```shell
+dotnet run --project src/BaGetter -- hash "NUGET-SERVER-API-KEY"
+```
+
 Users will now have to provide the API key to push packages:
 
 ```shell
@@ -295,6 +327,27 @@ To do so, you can insert the credentials in the `Authentication` section.
     }
     ...
 }
+```
+
+You can store a hashed password instead of plaintext:
+
+```json
+{
+    "Authentication": {
+        "Credentials": [
+            {
+                "Username": "username",
+                "PasswordHash": "PBKDF2$100000$<salt>$<hash>"
+            }
+        ]
+    }
+}
+```
+
+Generate password hash:
+
+```shell
+dotnet run --project src/BaGetter -- hash "password"
 ```
 
 Users will now have to provide the username and password to fetch and download packages.
