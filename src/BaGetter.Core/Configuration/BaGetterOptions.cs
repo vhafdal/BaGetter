@@ -82,5 +82,9 @@ public class BaGetterOptions
 
     public RequestRateLimitOptions RequestRateLimit { get; set; } = new();
 
+    public CorsPolicyOptions Cors { get; set; } = new();
+
+    public SecurityHeadersOptions SecurityHeaders { get; set; } = new();
+
     public NugetAuthenticationOptions Authentication { get; set; }
 }

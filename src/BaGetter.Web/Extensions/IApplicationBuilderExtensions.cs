@@ -18,4 +18,11 @@ public static class IApplicationBuilderExtensions
 
         return app.UseMiddleware<RequestTelemetryMiddleware>();
     }
+
+    public static IApplicationBuilder UseSecurityHeadersMiddleware(this IApplicationBuilder app)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+
+        return app.UseMiddleware<SecurityHeadersMiddleware>();
+    }
 }

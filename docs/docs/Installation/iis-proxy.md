@@ -24,6 +24,12 @@ When deploying to IIS, publish the host project (`src/BaGetter`) and deploy the 
 dotnet publish src/BaGetter/BaGetter.csproj -c Release -p:PublishProfile=FolderProfile
 ```
 
+Or run the provided script from the repository root:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/Publish-IIS.ps1
+```
+
 Expected output:
 
 ```text

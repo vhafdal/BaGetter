@@ -32,6 +32,12 @@ With IIS ([official microsoft documentation](https://learn.microsoft.com/aspnet/
 4. Ensure your IIS site's physical path points to the publish folder
 5. Confirm `web.config` exists in the publish output. If you only see `bin/Release/net10.0/` and not `publish/`, you likely built instead of published.
 
+You can also use the helper script from the repository root:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/Publish-IIS.ps1
+```
+
 For more information, please refer to the [documentation].
 
 ## 📦 Features

@@ -494,6 +494,62 @@ You can enable fixed-window request rate limiting:
 
 When enabled, rejected requests return `429 Too Many Requests`.
 
+## CORS policy
+
+By default, BaGetter allows all origins, methods, and headers. You can restrict this policy:
+
+```json
+{
+    ...
+
+    "Cors": {
+        "AllowAnyOrigin": false,
+        "AllowedOrigins": [
+            "https://packages.example.com"
+        ],
+        "AllowAnyMethod": true,
+        "AllowedMethods": [],
+        "AllowAnyHeader": true,
+        "AllowedHeaders": [],
+        "AllowCredentials": false
+    },
+
+    ...
+}
+```
+
+If `AllowAnyOrigin` is `true`, `AllowedOrigins` is ignored.
+
+## Security headers
+
+BaGetter can emit baseline security headers for all responses:
+
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: SAMEORIGIN`
+- `Referrer-Policy: no-referrer`
+- `X-Permitted-Cross-Domain-Policies: none`
+- `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+
+Configuration:
+
+```json
+{
+    ...
+
+    "SecurityHeaders": {
+        "Enabled": true,
+        "EnableHsts": false,
+        "HstsMaxAgeDays": 365,
+        "HstsIncludeSubDomains": true,
+        "HstsPreload": false
+    },
+
+    ...
+}
+```
+
+If `EnableHsts` is `true`, BaGetter enables HSTS outside development environments.
+
 ## Statistics
 
 On the application's statistics page the currently used services and overall package and version counts are listed.

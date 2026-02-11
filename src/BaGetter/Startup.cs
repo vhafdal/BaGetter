@@ -59,6 +59,17 @@ public class Startup
             options.Providers.Add<GzipCompressionProvider>();
         });
 
+        var securityHeaders = Configuration.GetSection(nameof(BaGetterOptions.SecurityHeaders)).Get<SecurityHeadersOptions>() ?? new SecurityHeadersOptions();
+        if (securityHeaders.EnableHsts)
+        {
+            services.AddHsts(options =>
+            {
+                options.MaxAge = TimeSpan.FromDays(securityHeaders.HstsMaxAgeDays);
+                options.IncludeSubDomains = securityHeaders.HstsIncludeSubDomains;
+                options.Preload = securityHeaders.HstsPreload;
+            });
+        }
+
         var rateLimitOptions = Configuration.GetSection(nameof(BaGetterOptions.RequestRateLimit)).Get<RequestRateLimitOptions>() ?? new RequestRateLimitOptions();
         services.AddRateLimiter(options =>
         {
@@ -131,7 +142,12 @@ public class Startup
 
         app.UseForwardedHeaders();
         app.UsePathBase(options.PathBase);
+        if (!env.IsDevelopment() && options.SecurityHeaders?.EnableHsts == true)
+        {
+            app.UseHsts();
+        }
 
+        app.UseSecurityHeadersMiddleware();
         app.UseResponseCompression();
         app.UseStaticFiles();
         app.UseAuthentication();

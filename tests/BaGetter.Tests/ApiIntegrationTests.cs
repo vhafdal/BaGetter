@@ -586,6 +586,45 @@ public class ApiIntegrationTests : IDisposable
         Assert.Equal(HttpStatusCode.TooManyRequests, secondResponse.StatusCode);
     }
 
+    [Fact]
+    public async Task SecurityHeadersAreIncludedByDefault()
+    {
+        using var response = await _client.GetAsync("v3/index.json");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(response.Headers.Contains("X-Content-Type-Options"));
+        Assert.True(response.Headers.Contains("X-Frame-Options"));
+        Assert.True(response.Headers.Contains("Referrer-Policy"));
+        Assert.True(response.Headers.Contains("Permissions-Policy"));
+    }
+
+    [Fact]
+    public async Task CorsCanRestrictOrigins()
+    {
+        using var app = new BaGetterApplication(_output, inMemoryConfiguration: config =>
+        {
+            config["Cors:AllowAnyOrigin"] = "false";
+            config["Cors:AllowedOrigins:0"] = "https://allowed.example";
+            config["Cors:AllowAnyMethod"] = "true";
+            config["Cors:AllowAnyHeader"] = "true";
+        });
+        using var client = app.CreateClient();
+
+        using var allowedRequest = new HttpRequestMessage(HttpMethod.Get, "v3/index.json");
+        allowedRequest.Headers.Add("Origin", "https://allowed.example");
+
+        using var allowedResponse = await client.SendAsync(allowedRequest);
+        Assert.Equal(HttpStatusCode.OK, allowedResponse.StatusCode);
+        Assert.Equal("https://allowed.example", string.Join(",", allowedResponse.Headers.GetValues("Access-Control-Allow-Origin")));
+
+        using var blockedRequest = new HttpRequestMessage(HttpMethod.Get, "v3/index.json");
+        blockedRequest.Headers.Add("Origin", "https://blocked.example");
+
+        using var blockedResponse = await client.SendAsync(blockedRequest);
+        Assert.Equal(HttpStatusCode.OK, blockedResponse.StatusCode);
+        Assert.False(blockedResponse.Headers.Contains("Access-Control-Allow-Origin"));
+    }
+
     public void Dispose()
     {
         _app.Dispose();

@@ -72,6 +72,9 @@ public static partial class DependencyInjectionExtensions
         services.AddBaGetterOptions<SearchOptions>(nameof(BaGetterOptions.Search));
         services.AddBaGetterOptions<StorageOptions>(nameof(BaGetterOptions.Storage));
         services.AddBaGetterOptions<StatisticsOptions>(nameof(BaGetterOptions.Statistics));
+        services.AddBaGetterOptions<RequestRateLimitOptions>(nameof(BaGetterOptions.RequestRateLimit));
+        services.AddBaGetterOptions<CorsPolicyOptions>(nameof(BaGetterOptions.Cors));
+        services.AddBaGetterOptions<SecurityHeadersOptions>(nameof(BaGetterOptions.SecurityHeaders));
     }
 
     private static void AddBaGetServices(this IServiceCollection services)
