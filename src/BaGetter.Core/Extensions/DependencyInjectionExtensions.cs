@@ -75,6 +75,7 @@ public static partial class DependencyInjectionExtensions
         services.AddBaGetterOptions<RequestRateLimitOptions>(nameof(BaGetterOptions.RequestRateLimit));
         services.AddBaGetterOptions<CorsPolicyOptions>(nameof(BaGetterOptions.Cors));
         services.AddBaGetterOptions<SecurityHeadersOptions>(nameof(BaGetterOptions.SecurityHeaders));
+        services.AddBaGetterOptions<SearchReindexOptions>(nameof(BaGetterOptions.Reindex));
     }
 
     private static void AddBaGetServices(this IServiceCollection services)
@@ -103,6 +104,7 @@ public static partial class DependencyInjectionExtensions
         services.TryAddTransient<IPackageService, PackageService>();
         services.TryAddTransient<IPackageStorageService, PackageStorageService>();
         services.TryAddTransient<IServiceIndexService, BaGetterServiceIndex>();
+        services.TryAddTransient<ISearchReindexService, SearchReindexService>();
         services.TryAddTransient<ISymbolIndexingService, SymbolIndexingService>();
         services.TryAddTransient<ISymbolStorageService, SymbolStorageService>();
         services.TryAddTransient<IStatisticsService, StatisticsService>();

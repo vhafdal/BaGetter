@@ -1,10 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using BaGetter.Core.Configuration;
 
 namespace BaGetter.Core;
 
-public class BaGetterOptions
+public class BaGetterOptions : IValidatableObject
 {
     /// <summary>
     /// The API Key required to authenticate package
@@ -86,5 +87,58 @@ public class BaGetterOptions
 
     public SecurityHeadersOptions SecurityHeaders { get; set; } = new();
 
+    public SearchReindexOptions Reindex { get; set; } = new();
+
     public NugetAuthenticationOptions Authentication { get; set; }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (MaxPackageSizeGiB == 0)
+        {
+            yield return new ValidationResult(
+                $"{nameof(MaxPackageSizeGiB)} must be greater than 0.",
+                new[] { nameof(MaxPackageSizeGiB) });
+        }
+
+        if (!string.IsNullOrEmpty(PathBase))
+        {
+            if (!PathBase.StartsWith('/'))
+            {
+                yield return new ValidationResult(
+                    $"{nameof(PathBase)} must start with '/'.",
+                    new[] { nameof(PathBase) });
+            }
+
+            if (PathBase.Length > 1 && PathBase.EndsWith('/'))
+            {
+                yield return new ValidationResult(
+                    $"{nameof(PathBase)} must not end with '/' unless it is '/'.",
+                    new[] { nameof(PathBase) });
+            }
+        }
+
+        if (Cors != null)
+        {
+            if (Cors.AllowAnyOrigin && Cors.AllowCredentials)
+            {
+                yield return new ValidationResult(
+                    $"{nameof(Cors)}.{nameof(CorsPolicyOptions.AllowCredentials)} cannot be true when {nameof(Cors)}.{nameof(CorsPolicyOptions.AllowAnyOrigin)} is true.",
+                    new[] { nameof(Cors) });
+            }
+
+            if (!Cors.AllowAnyOrigin && (Cors.AllowedOrigins == null || Cors.AllowedOrigins.Length == 0))
+            {
+                yield return new ValidationResult(
+                    $"{nameof(Cors)}.{nameof(CorsPolicyOptions.AllowedOrigins)} must contain at least one origin when {nameof(Cors)}.{nameof(CorsPolicyOptions.AllowAnyOrigin)} is false.",
+                    new[] { nameof(Cors) });
+            }
+        }
+
+        if (SecurityHeaders is { EnableHsts: true, Enabled: false })
+        {
+            yield return new ValidationResult(
+                $"{nameof(SecurityHeaders)}.{nameof(SecurityHeadersOptions.EnableHsts)} requires {nameof(SecurityHeaders)}.{nameof(SecurityHeadersOptions.Enabled)} to be true.",
+                new[] { nameof(SecurityHeaders) });
+        }
+    }
 }

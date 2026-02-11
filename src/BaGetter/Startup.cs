@@ -50,6 +50,7 @@ public class Startup
         services.AddTransient(DependencyInjectionExtensions.GetServiceFromProviders<ISearchIndexer>);
 
         services.AddHealthChecks();
+        services.AddHostedService<SearchReindexHostedService>();
 
         services.AddCors();
         services.AddResponseCompression(options =>

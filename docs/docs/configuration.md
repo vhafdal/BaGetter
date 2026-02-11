@@ -550,6 +550,48 @@ Configuration:
 
 If `EnableHsts` is `true`, BaGetter enables HSTS outside development environments.
 
+## Search reindexing
+
+BaGetter supports rebuilding the search index from packages stored in the database.
+
+Configuration:
+
+```json
+{
+    ...
+
+    "Reindex": {
+        "Enabled": false,
+        "RunOnStartup": false,
+        "IntervalMinutes": 0,
+        "BatchSize": 100
+    },
+
+    ...
+}
+```
+
+- `Enabled`: enables the background reindex hosted service.
+- `RunOnStartup`: run one reindex pass when the app starts.
+- `IntervalMinutes`: if greater than `0`, run periodic reindex passes at this interval.
+- `BatchSize`: number of packages processed per batch.
+
+You can also trigger reindex manually from the CLI:
+
+```shell
+dotnet run --project src/BaGetter -- reindex search
+```
+
+## Audit logging
+
+BaGetter emits audit log entries for package mutation operations:
+
+- package upload attempts and outcomes
+- package delete attempts and outcomes
+- package relist attempts and outcomes
+
+Each event includes actor and client IP metadata to simplify traceability in centralized logs.
+
 ## Statistics
 
 On the application's statistics page the currently used services and overall package and version counts are listed.

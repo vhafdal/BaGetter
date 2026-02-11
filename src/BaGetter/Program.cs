@@ -43,6 +43,20 @@ public class Program
             });
         });
 
+        app.Command("reindex", reindex =>
+        {
+            reindex.Command("search", search =>
+            {
+                search.OnExecuteAsync(async cancellationToken =>
+                {
+                    using var scope = host.Services.CreateScope();
+                    var reindexService = scope.ServiceProvider.GetRequiredService<ISearchReindexService>();
+
+                    await reindexService.ReindexAsync(cancellationToken);
+                });
+            });
+        });
+
         app.Option("--urls", "The URLs that BaGetter should bind to.", CommandOptionType.SingleValue);
 
         app.OnExecuteAsync(async cancellationToken =>
