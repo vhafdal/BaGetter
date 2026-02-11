@@ -1,10 +1,14 @@
 using System.IO;
+using System.IO.Compression;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace BaGetter.Tests;
 
 public static class TestResources
 {
     private const string ResourcePrefix = "BaGetter.Tests.TestData.";
+    private static readonly Regex VersionRegex = new(@"<version>.*?</version>", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
     /// <summary>
     /// Test package created with the following properties:
@@ -40,5 +44,41 @@ public static class TestResources
 
         bufferedStream.Position = 0;
         return bufferedStream;
+    }
+
+    public static MemoryStream GetPackageStreamWithVersion(string version)
+    {
+        using var originalPackageStream = GetResourceStream(Package);
+        using var sourceArchive = new ZipArchive(originalPackageStream, ZipArchiveMode.Read, leaveOpen: false);
+
+        var output = new MemoryStream();
+        using (var targetArchive = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var entry in sourceArchive.Entries)
+            {
+                var targetEntry = targetArchive.CreateEntry(entry.FullName);
+
+                using var sourceEntryStream = entry.Open();
+                using var targetEntryStream = targetEntry.Open();
+
+                if (entry.FullName.EndsWith(".nuspec", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    using var reader = new StreamReader(sourceEntryStream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
+                    var nuspec = reader.ReadToEnd();
+                    var updatedNuspec = VersionRegex.Replace(nuspec, $"<version>{version}</version>", 1);
+
+                    using var writer = new StreamWriter(targetEntryStream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), bufferSize: 1024, leaveOpen: true);
+                    writer.Write(updatedNuspec);
+                    writer.Flush();
+                }
+                else
+                {
+                    sourceEntryStream.CopyTo(targetEntryStream);
+                }
+            }
+        }
+
+        output.Position = 0;
+        return output;
     }
 }

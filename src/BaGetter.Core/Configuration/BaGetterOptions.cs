@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel.DataAnnotations;
 using BaGetter.Core.Configuration;
 
 namespace BaGetter.Core;
@@ -54,7 +55,8 @@ public class BaGetterOptions
     /// The number of package versions to include in a single registration page.
     /// If a package has more versions than this value, the registration index will return paged entries.
     /// </summary>
-    public int RegistrationPageSize { get; set; } = 32;
+    [Range(1, int.MaxValue)]
+    public int RegistrationPageSize { get; set; } = 64;
 
     /// <summary>
     /// If this is set to a value, it will limit the number of versions that can be pushed for a package.

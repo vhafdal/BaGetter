@@ -381,6 +381,78 @@ public class ApiIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task PackageMetadataReturnsPagedIndexWhenRegistrationPageSizeIsSmall()
+    {
+        using var app = new BaGetterApplication(_output, inMemoryConfiguration: config => config["RegistrationPageSize"] = "2");
+        using var client = app.CreateClient();
+
+        await using var package100 = TestResources.GetPackageStreamWithVersion("1.0.0");
+        await using var package110 = TestResources.GetPackageStreamWithVersion("1.1.0");
+        await using var package120 = TestResources.GetPackageStreamWithVersion("1.2.0");
+
+        await app.AddPackageAsync(package100);
+        await app.AddPackageAsync(package110);
+        await app.AddPackageAsync(package120);
+
+        using var response = await client.GetAsync("v3/registration/TestData/index.json");
+        var content = await response.Content.ReadAsStringAsync();
+        using var document = JsonDocument.Parse(content);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(2, document.RootElement.GetProperty("count").GetInt32());
+
+        var pages = document.RootElement.GetProperty("items");
+        Assert.Equal(2, pages.GetArrayLength());
+
+        Assert.False(pages[0].TryGetProperty("items", out _));
+        Assert.False(pages[1].TryGetProperty("items", out _));
+
+        var firstPageUrl = GetRegistrationPageUrl(pages[0]);
+        var secondPageUrl = GetRegistrationPageUrl(pages[1]);
+
+        Assert.Contains("/v3/registration/testdata/page/", firstPageUrl, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("/v3/registration/testdata/page/", secondPageUrl, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task PackageMetadataPageReturnsInlinedItemsForPagedRegistration()
+    {
+        using var app = new BaGetterApplication(_output, inMemoryConfiguration: config => config["RegistrationPageSize"] = "2");
+        using var client = app.CreateClient();
+
+        await using var package100 = TestResources.GetPackageStreamWithVersion("1.0.0");
+        await using var package110 = TestResources.GetPackageStreamWithVersion("1.1.0");
+        await using var package120 = TestResources.GetPackageStreamWithVersion("1.2.0");
+
+        await app.AddPackageAsync(package100);
+        await app.AddPackageAsync(package110);
+        await app.AddPackageAsync(package120);
+
+        using var indexResponse = await client.GetAsync("v3/registration/TestData/index.json");
+        var indexContent = await indexResponse.Content.ReadAsStringAsync();
+        using var indexDocument = JsonDocument.Parse(indexContent);
+
+        var firstPageUrl = GetRegistrationPageUrl(indexDocument.RootElement.GetProperty("items")[0]);
+        using var pageResponse = await client.GetAsync(firstPageUrl);
+        var pageContent = await pageResponse.Content.ReadAsStringAsync();
+        using var pageDocument = JsonDocument.Parse(pageContent);
+
+        Assert.Equal(HttpStatusCode.OK, pageResponse.StatusCode);
+        Assert.Equal(2, pageDocument.RootElement.GetProperty("count").GetInt32());
+        Assert.Equal(2, pageDocument.RootElement.GetProperty("items").GetArrayLength());
+    }
+
+    private static string GetRegistrationPageUrl(JsonElement pageElement)
+    {
+        if (pageElement.TryGetProperty("@id", out var idProperty))
+        {
+            return idProperty.GetString();
+        }
+
+        return pageElement.GetProperty("registrationPageUrl").GetString();
+    }
+
+    [Fact]
     public async Task PackageDependentsReturnsOk()
     {
         using var response = await _client.GetAsync("v3/dependents?packageId=TestData");

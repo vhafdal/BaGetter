@@ -18,7 +18,11 @@ public class RegistrationBuilder
         ArgumentNullException.ThrowIfNull(options);
 
         _url = url;
-        _registrationPageSize = Math.Max(1, options.Value.RegistrationPageSize);
+        _registrationPageSize = options.Value.RegistrationPageSize;
+        if (_registrationPageSize < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(options), "RegistrationPageSize must be greater than 0.");
+        }
     }
 
     public virtual BaGetterRegistrationIndexResponse BuildIndex(PackageRegistration registration)
