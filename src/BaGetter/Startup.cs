@@ -1,4 +1,6 @@
 using System;
+using System.Threading.Tasks;
+using System.Threading.RateLimiting;
 using BaGetter.Authentication;
 using BaGetter.Core;
 using BaGetter.Core.Extensions;
@@ -10,7 +12,9 @@ using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -45,11 +49,60 @@ public class Startup
         services.AddTransient(DependencyInjectionExtensions.GetServiceFromProviders<ISearchService>);
         services.AddTransient(DependencyInjectionExtensions.GetServiceFromProviders<ISearchIndexer>);
 
-        services.AddSingleton<IConfigureOptions<MvcRazorRuntimeCompilationOptions>, ConfigureRazorRuntimeCompilation>();
-
         services.AddHealthChecks();
+        services.AddHostedService<SearchReindexHostedService>();
 
         services.AddCors();
+        services.AddResponseCompression(options =>
+        {
+            options.EnableForHttps = true;
+            options.Providers.Add<BrotliCompressionProvider>();
+            options.Providers.Add<GzipCompressionProvider>();
+        });
+
+        var securityHeaders = Configuration.GetSection(nameof(BaGetterOptions.SecurityHeaders)).Get<SecurityHeadersOptions>() ?? new SecurityHeadersOptions();
+        if (securityHeaders.EnableHsts)
+        {
+            services.AddHsts(options =>
+            {
+                options.MaxAge = TimeSpan.FromDays(securityHeaders.HstsMaxAgeDays);
+                options.IncludeSubDomains = securityHeaders.HstsIncludeSubDomains;
+                options.Preload = securityHeaders.HstsPreload;
+            });
+        }
+
+        var rateLimitOptions = Configuration.GetSection(nameof(BaGetterOptions.RequestRateLimit)).Get<RequestRateLimitOptions>() ?? new RequestRateLimitOptions();
+        services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.OnRejected = static (context, _) =>
+            {
+                context.HttpContext.Response.Headers["Retry-After"] = "60";
+                return ValueTask.CompletedTask;
+            };
+
+            if (!rateLimitOptions.Enabled)
+            {
+                return;
+            }
+
+            var window = TimeSpan.FromSeconds(rateLimitOptions.WindowSeconds);
+            options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+            {
+                var key = httpContext.User?.Identity?.IsAuthenticated == true
+                    ? $"user:{httpContext.User.Identity?.Name ?? "authenticated"}"
+                    : $"ip:{httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown"}";
+
+                return RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = rateLimitOptions.PermitLimit,
+                    Window = window,
+                    QueueLimit = rateLimitOptions.QueueLimit,
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                    AutoReplenishment = true,
+                });
+            });
+        });
     }
 
     private void ConfigureBaGetterApplication(BaGetterApplication app)
@@ -90,10 +143,18 @@ public class Startup
 
         app.UseForwardedHeaders();
         app.UsePathBase(options.PathBase);
+        if (!env.IsDevelopment() && options.SecurityHeaders?.EnableHsts == true)
+        {
+            app.UseHsts();
+        }
 
+        app.UseSecurityHeadersMiddleware();
+        app.UseResponseCompression();
         app.UseStaticFiles();
         app.UseAuthentication();
         app.UseRouting();
+        app.UseRateLimiter();
+        app.UseRequestTelemetryMiddleware();
         app.UseAuthorization();
 
         app.UseCors(ConfigureBaGetterServer.CorsPolicy);
