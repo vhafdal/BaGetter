@@ -26,6 +26,7 @@ Recent operational capabilities include ETag-based HTTP caching, response compre
 You can run BaGetter on your preferred platform:
 
 - [On your computer](Installation/local.md)
+- [Windows Service](Installation/windows-service.md)
 - [Docker](Installation/docker.md)
 - [Azure](Installation/azure.md)
 - [AWS](Installation/aws.md)
