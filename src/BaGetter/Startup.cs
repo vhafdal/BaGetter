@@ -91,6 +91,7 @@ public class Startup
         app.UseStaticFiles();
         app.UseAuthentication();
         app.UseRouting();
+        app.UseRequestTelemetryMiddleware();
         app.UseAuthorization();
 
         app.UseCors(ConfigureBaGetterServer.CorsPolicy);

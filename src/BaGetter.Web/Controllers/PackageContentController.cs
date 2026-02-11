@@ -1,11 +1,13 @@
 using System;
 using System.IO;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BaGetter.Authentication;
 using BaGetter.Core;
 using BaGetter.Protocol.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NuGet.Versioning;
 
@@ -36,6 +38,14 @@ public class PackageContentController : Controller
             return NotFound();
         }
 
+        var etag = HttpCacheUtility.CreateStrongEtagFromText(JsonSerializer.Serialize(versions));
+        if (HttpCacheUtility.MatchesIfNoneMatch(Request, etag))
+        {
+            HttpCacheUtility.SetEtag(Response, etag);
+            return StatusCode(StatusCodes.Status304NotModified);
+        }
+
+        HttpCacheUtility.SetEtag(Response, etag);
         return versions;
     }
 
@@ -53,12 +63,20 @@ public class PackageContentController : Controller
             return NotFound();
         }
 
+        var etag = HttpCacheUtility.CreateStrongEtagFromParts("package", id.ToLowerInvariant(), nugetVersion.ToNormalizedString().ToLowerInvariant());
+        if (HttpCacheUtility.MatchesIfNoneMatch(Request, etag))
+        {
+            HttpCacheUtility.SetEtag(Response, etag);
+            return StatusCode(StatusCodes.Status304NotModified);
+        }
+
         var packageStream = await _content.GetPackageContentStreamOrNullAsync(id, nugetVersion, cancellationToken);
         if (packageStream == null)
         {
             return NotFound();
         }
 
+        HttpCacheUtility.SetEtag(Response, etag);
         return File(packageStream, "application/octet-stream");
     }
 
@@ -69,12 +87,20 @@ public class PackageContentController : Controller
             return NotFound();
         }
 
+        var etag = HttpCacheUtility.CreateStrongEtagFromParts("nuspec", id.ToLowerInvariant(), nugetVersion.ToNormalizedString().ToLowerInvariant());
+        if (HttpCacheUtility.MatchesIfNoneMatch(Request, etag))
+        {
+            HttpCacheUtility.SetEtag(Response, etag);
+            return StatusCode(StatusCodes.Status304NotModified);
+        }
+
         var nuspecStream = await _content.GetPackageManifestStreamOrNullAsync(id, nugetVersion, cancellationToken);
         if (nuspecStream == null)
         {
             return NotFound();
         }
 
+        HttpCacheUtility.SetEtag(Response, etag);
         return File(nuspecStream, "text/xml");
     }
 
@@ -85,12 +111,20 @@ public class PackageContentController : Controller
             return NotFound();
         }
 
+        var etag = HttpCacheUtility.CreateStrongEtagFromParts("readme", id.ToLowerInvariant(), nugetVersion.ToNormalizedString().ToLowerInvariant());
+        if (HttpCacheUtility.MatchesIfNoneMatch(Request, etag))
+        {
+            HttpCacheUtility.SetEtag(Response, etag);
+            return StatusCode(StatusCodes.Status304NotModified);
+        }
+
         var readmeStream = await _content.GetPackageReadmeStreamOrNullAsync(id, nugetVersion, cancellationToken);
         if (readmeStream == null)
         {
             return NotFound();
         }
 
+        HttpCacheUtility.SetEtag(Response, etag);
         return File(readmeStream, "text/markdown");
     }
 
@@ -99,6 +133,13 @@ public class PackageContentController : Controller
         if (!NuGetVersion.TryParse(version, out var nugetVersion))
         {
             return NotFound();
+        }
+
+        var etag = HttpCacheUtility.CreateStrongEtagFromParts("icon", id.ToLowerInvariant(), nugetVersion.ToNormalizedString().ToLowerInvariant());
+        if (HttpCacheUtility.MatchesIfNoneMatch(Request, etag))
+        {
+            HttpCacheUtility.SetEtag(Response, etag);
+            return StatusCode(StatusCodes.Status304NotModified);
         }
 
         var iconStream = await _content.GetPackageIconStreamOrNullAsync(id, nugetVersion, cancellationToken);
@@ -111,6 +152,7 @@ public class PackageContentController : Controller
         await iconStream.CopyToAsync(bufferedStream, cancellationToken);
         var iconBytes = bufferedStream.ToArray();
 
+        HttpCacheUtility.SetEtag(Response, etag);
         return File(iconBytes, DetectImageContentType(iconBytes));
     }
 

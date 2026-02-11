@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BaGetter.Authentication;
@@ -6,6 +7,7 @@ using BaGetter.Core;
 using BaGetter.Protocol.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 using NuGet.Versioning;
 
 namespace BaGetter.Web;
@@ -35,6 +37,14 @@ public class PackageMetadataController : Controller
             return NotFound();
         }
 
+        var etag = HttpCacheUtility.CreateStrongEtagFromText(JsonSerializer.Serialize(index));
+        if (HttpCacheUtility.MatchesIfNoneMatch(Request, etag))
+        {
+            HttpCacheUtility.SetEtag(Response, etag);
+            return StatusCode(StatusCodes.Status304NotModified);
+        }
+
+        HttpCacheUtility.SetEtag(Response, etag);
         return index;
     }
 
@@ -58,6 +68,14 @@ public class PackageMetadataController : Controller
             return NotFound();
         }
 
+        var etag = HttpCacheUtility.CreateStrongEtagFromText(JsonSerializer.Serialize(page));
+        if (HttpCacheUtility.MatchesIfNoneMatch(Request, etag))
+        {
+            HttpCacheUtility.SetEtag(Response, etag);
+            return StatusCode(StatusCodes.Status304NotModified);
+        }
+
+        HttpCacheUtility.SetEtag(Response, etag);
         return page;
     }
 
@@ -76,6 +94,14 @@ public class PackageMetadataController : Controller
             return NotFound();
         }
 
+        var etag = HttpCacheUtility.CreateStrongEtagFromText(JsonSerializer.Serialize(leaf));
+        if (HttpCacheUtility.MatchesIfNoneMatch(Request, etag))
+        {
+            HttpCacheUtility.SetEtag(Response, etag);
+            return StatusCode(StatusCodes.Status304NotModified);
+        }
+
+        HttpCacheUtility.SetEtag(Response, etag);
         return leaf;
     }
 }

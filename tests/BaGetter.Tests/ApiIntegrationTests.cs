@@ -316,6 +316,24 @@ public class ApiIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task PackageMetadataReturnsNotModifiedWhenIfNoneMatchMatches()
+    {
+        await _app.AddPackageAsync(_packageStream);
+
+        using var firstResponse = await _client.GetAsync("v3/registration/TestData/index.json");
+        Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
+
+        var etag = firstResponse.Headers.ETag?.Tag;
+        Assert.False(string.IsNullOrWhiteSpace(etag));
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, "v3/registration/TestData/index.json");
+        request.Headers.TryAddWithoutValidation("If-None-Match", etag);
+
+        using var secondResponse = await _client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.NotModified, secondResponse.StatusCode);
+    }
+
+    [Fact]
     public async Task PackageMetadataReturnsNotFound()
     {
         using var response = await _client.GetAsync("v3/registration/PackageDoesNotExist/index.json");
@@ -440,6 +458,7 @@ public class ApiIntegrationTests : IDisposable
         Assert.Equal(HttpStatusCode.OK, pageResponse.StatusCode);
         Assert.Equal(2, pageDocument.RootElement.GetProperty("count").GetInt32());
         Assert.Equal(2, pageDocument.RootElement.GetProperty("items").GetArrayLength());
+        Assert.False(string.IsNullOrWhiteSpace(pageResponse.Headers.ETag?.Tag));
     }
 
     private static string GetRegistrationPageUrl(JsonElement pageElement)
@@ -473,6 +492,24 @@ public class ApiIntegrationTests : IDisposable
         using var response = await _client.GetAsync("v3/dependents");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PackageDownloadReturnsNotModifiedWhenIfNoneMatchMatches()
+    {
+        await _app.AddPackageAsync(_packageStream);
+
+        using var firstResponse = await _client.GetAsync("v3/package/TestData/1.2.3/TestData.1.2.3.nupkg");
+        Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
+
+        var etag = firstResponse.Headers.ETag?.Tag;
+        Assert.False(string.IsNullOrWhiteSpace(etag));
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, "v3/package/TestData/1.2.3/TestData.1.2.3.nupkg");
+        request.Headers.TryAddWithoutValidation("If-None-Match", etag);
+
+        using var secondResponse = await _client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.NotModified, secondResponse.StatusCode);
     }
 
     [Fact]

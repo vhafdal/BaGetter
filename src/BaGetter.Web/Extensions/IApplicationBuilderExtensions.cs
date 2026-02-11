@@ -11,4 +11,11 @@ public static class IApplicationBuilderExtensions
 
         return app.UseMiddleware<OperationCancelledMiddleware>();
     }
+
+    public static IApplicationBuilder UseRequestTelemetryMiddleware(this IApplicationBuilder app)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+
+        return app.UseMiddleware<RequestTelemetryMiddleware>();
+    }
 }
