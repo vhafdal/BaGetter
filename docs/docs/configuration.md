@@ -5,6 +5,17 @@ import TabItem from '@theme/TabItem';
 
 You can modify BaGetter's configurations by editing the `appsettings.json` file.
 
+BaGetter also loads configuration from an OS-level location when present:
+
+- Windows: `%ProgramData%\BaGetter\AppSettings.json`
+- Linux: `/etc/BaGetter/AppSettings.json`
+
+You can override the configuration root path using:
+
+```text
+BAGET_CONFIG_ROOT
+```
+
 ## Require an API key
 
 You can require that users provide a password, called an API key, to publish packages.
@@ -425,6 +436,63 @@ Example:
 ```text
 /v3/registration/newtonsoft.json/page/11.0.1/13.0.3.json
 ```
+
+## HTTP caching and compression
+
+BaGetter now emits `ETag` headers for:
+
+- registration index/page/leaf endpoints
+- package versions endpoint
+- package content endpoints (`.nupkg`, `.nuspec`, readme, icon)
+
+Metadata endpoints use:
+
+```text
+Cache-Control: public, max-age=0, must-revalidate
+```
+
+Versioned package content endpoints use:
+
+```text
+Cache-Control: public, max-age=31536000, immutable
+```
+
+BaGetter also enables response compression (Brotli + Gzip) for supported responses.
+
+## HTTP request telemetry
+
+BaGetter logs a structured entry per request including method, path, status code, duration, endpoint, and trace identifier.
+
+It also records in-process metrics using `System.Diagnostics.Metrics`:
+
+- `bagetter.http.requests` (counter)
+- `bagetter.http.request.duration` (histogram, milliseconds)
+
+## Request rate limiting
+
+You can enable fixed-window request rate limiting:
+
+```json
+{
+    ...
+
+    "RequestRateLimit": {
+        "Enabled": true,
+        "PermitLimit": 120,
+        "WindowSeconds": 60,
+        "QueueLimit": 0
+    },
+
+    ...
+}
+```
+
+- `Enabled`: turn rate limiting on or off.
+- `PermitLimit`: number of requests allowed in each window.
+- `WindowSeconds`: window duration in seconds.
+- `QueueLimit`: number of requests to queue when the limit is reached.
+
+When enabled, rejected requests return `429 Too Many Requests`.
 
 ## Statistics
 

@@ -80,5 +80,7 @@ public class BaGetterOptions
 
     public StatisticsOptions Statistics { get; set; }
 
+    public RequestRateLimitOptions RequestRateLimit { get; set; } = new();
+
     public NugetAuthenticationOptions Authentication { get; set; }
 }

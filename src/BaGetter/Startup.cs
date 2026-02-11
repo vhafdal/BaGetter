@@ -1,4 +1,6 @@
 using System;
+using System.Threading.Tasks;
+using System.Threading.RateLimiting;
 using BaGetter.Authentication;
 using BaGetter.Core;
 using BaGetter.Core.Extensions;
@@ -10,6 +12,8 @@ using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,6 +57,39 @@ public class Startup
             options.EnableForHttps = true;
             options.Providers.Add<BrotliCompressionProvider>();
             options.Providers.Add<GzipCompressionProvider>();
+        });
+
+        var rateLimitOptions = Configuration.GetSection(nameof(BaGetterOptions.RequestRateLimit)).Get<RequestRateLimitOptions>() ?? new RequestRateLimitOptions();
+        services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.OnRejected = static (context, _) =>
+            {
+                context.HttpContext.Response.Headers["Retry-After"] = "60";
+                return ValueTask.CompletedTask;
+            };
+
+            if (!rateLimitOptions.Enabled)
+            {
+                return;
+            }
+
+            var window = TimeSpan.FromSeconds(rateLimitOptions.WindowSeconds);
+            options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+            {
+                var key = httpContext.User?.Identity?.IsAuthenticated == true
+                    ? $"user:{httpContext.User.Identity?.Name ?? "authenticated"}"
+                    : $"ip:{httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown"}";
+
+                return RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = rateLimitOptions.PermitLimit,
+                    Window = window,
+                    QueueLimit = rateLimitOptions.QueueLimit,
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                    AutoReplenishment = true,
+                });
+            });
         });
     }
 
@@ -99,6 +136,7 @@ public class Startup
         app.UseStaticFiles();
         app.UseAuthentication();
         app.UseRouting();
+        app.UseRateLimiter();
         app.UseRequestTelemetryMiddleware();
         app.UseAuthorization();
 

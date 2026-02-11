@@ -567,6 +567,25 @@ public class ApiIntegrationTests : IDisposable
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    [Fact]
+    public async Task RateLimitingReturnsTooManyRequestsWhenEnabled()
+    {
+        using var app = new BaGetterApplication(_output, inMemoryConfiguration: config =>
+        {
+            config["RequestRateLimit:Enabled"] = "true";
+            config["RequestRateLimit:PermitLimit"] = "1";
+            config["RequestRateLimit:WindowSeconds"] = "60";
+            config["RequestRateLimit:QueueLimit"] = "0";
+        });
+        using var client = app.CreateClient();
+
+        using var firstResponse = await client.GetAsync("v3/index.json");
+        using var secondResponse = await client.GetAsync("v3/index.json");
+
+        Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, secondResponse.StatusCode);
+    }
+
     public void Dispose()
     {
         _app.Dispose();
