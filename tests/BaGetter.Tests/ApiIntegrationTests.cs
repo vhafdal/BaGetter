@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
@@ -349,6 +350,32 @@ public class ApiIntegrationTests : IDisposable
     public async Task PackageMetadataLeafReturnsNotFound()
     {
         using var response = await _client.GetAsync("v3/registration/PackageDoesNotExist/1.0.0.json");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PackageMetadataPageReturnsOk()
+    {
+        await _app.AddPackageAsync(_packageStream);
+
+        using var response = await _client.GetAsync("v3/registration/TestData/page/1.2.3/1.2.3.json");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var content = await response.Content.ReadAsStringAsync();
+        using var document = JsonDocument.Parse(content);
+
+        Assert.Equal(1, document.RootElement.GetProperty("count").GetInt32());
+        Assert.Equal("1.2.3", document.RootElement.GetProperty("lower").GetString());
+        Assert.Equal("1.2.3", document.RootElement.GetProperty("upper").GetString());
+        Assert.Equal(1, document.RootElement.GetProperty("items").GetArrayLength());
+    }
+
+    [Fact]
+    public async Task PackageMetadataPageReturnsNotFound()
+    {
+        using var response = await _client.GetAsync("v3/registration/PackageDoesNotExist/page/1.0.0/1.0.0.json");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }

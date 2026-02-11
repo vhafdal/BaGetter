@@ -51,6 +51,12 @@ public class BaGetterOptions
     public uint MaxPackageSizeGiB { get; set; } = 8;
 
     /// <summary>
+    /// The number of package versions to include in a single registration page.
+    /// If a package has more versions than this value, the registration index will return paged entries.
+    /// </summary>
+    public int RegistrationPageSize { get; set; } = 32;
+
+    /// <summary>
     /// If this is set to a value, it will limit the number of versions that can be pushed for a package.
     /// the older versions will be deleted.
     /// This setting is not used anymore and is deprecated.

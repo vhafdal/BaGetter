@@ -396,6 +396,36 @@ This can be useful if you are hosting a private feed and need to host large pack
 }
 ```
 
+## Registration paging
+
+BaGetter serves package metadata using the NuGet registration resource. By default, versions are split into pages of 64 entries.
+This helps keep registration index payloads smaller for packages with many versions.
+
+You can configure this using `RegistrationPageSize`:
+
+```json
+{
+    ...
+
+    "RegistrationPageSize": 64,
+
+    ...
+}
+```
+
+When paging is active, the registration index (`/v3/registration/{id}/index.json`) returns page references,
+and each page can be fetched from:
+
+```text
+/v3/registration/{id}/page/{lower}/{upper}.json
+```
+
+Example:
+
+```text
+/v3/registration/newtonsoft.json/page/11.0.1/13.0.3.json
+```
+
 ## Statistics
 
 On the application's statistics page the currently used services and overall package and version counts are listed.
