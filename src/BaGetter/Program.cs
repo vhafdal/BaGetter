@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using BaGetter.Core;
 using BaGetter.Web;
@@ -65,6 +66,13 @@ public class Program
                 {
                     config.SetBasePath(root);
                 }
+                // Cross-platform configuration paths
+                var configDirectory = OperatingSystem.IsWindows()
+                    ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "BaGetter")
+                    : "/etc/BaGetter";
+
+                var webSettingsPath = Path.Combine(configDirectory, "AppSettings.json");
+                config.AddJsonFile(webSettingsPath, optional: true, reloadOnChange: true);
 
                 // Optionally load secrets from files in the conventional path
                 config.AddKeyPerFile("/run/secrets", optional: true);
