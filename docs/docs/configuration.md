@@ -320,7 +320,8 @@ To do so, you can insert the credentials in the `Authentication` section.
         "Credentials": [
             {
                 "Username": "username",
-                "Password": "password"
+                "Password": "password",
+                "Roles": [ "Admin" ]
             }
         ]
         ...
@@ -328,6 +329,8 @@ To do so, you can insert the credentials in the `Authentication` section.
     ...
 }
 ```
+
+- `Roles` controls role-based permissions (for example `Admin` for administration-only actions in the web UI such as package deletion).
 
 You can store a hashed password instead of plaintext:
 

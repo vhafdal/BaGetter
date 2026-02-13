@@ -168,6 +168,10 @@ else
                                 <th>Version</th>
                                 <th>Downloads</th>
                                 <th>Last updated</th>
+                                @if (Model.CanDeletePackages)
+                                {
+                                    <th>Actions</th>
+                                }
                             </tr>
                         </thead>
                         <tbody class="no-border">
@@ -180,6 +184,19 @@ else
                                     <td><a asp-page="Package" asp-route-version="@version.Version">@version.Version.ToNormalizedString()</a></td>
                                     <td>@version.Downloads.ToString("N0")</td>
                                     <td>@version.LastUpdated.ToShortDateString()</td>
+                                    @if (Model.CanDeletePackages)
+                                    {
+                                        <td>
+                                            <button type="button"
+                                                    class="btn btn-link btn-xs text-danger js-delete-package-version"
+                                                    data-package-id="@Model.Package.Id"
+                                                    data-package-version="@version.Version.ToNormalizedString()"
+                                                    title="Delete package version"
+                                                    aria-label="Delete package version">
+                                                <i class="ms-Icon ms-Icon--Delete" aria-hidden="true"></i>
+                                            </button>
+                                        </td>
+                                    }
                                 </tr>
                             }
                         </tbody>
@@ -331,6 +348,94 @@ else
             }
         ];
     </script>
+
+    @if (Model.CanDeletePackages)
+    {
+        <script type="text/javascript">
+            (function () {
+                function sendDelete(packageId, packageVersion, apiKey) {
+                    var url = "/api/v2/package/" + encodeURIComponent(packageId) + "/" + encodeURIComponent(packageVersion);
+                    var headers = apiKey ? { "X-NuGet-ApiKey": apiKey } : {};
+
+                    return window.fetch(url, {
+                        method: "DELETE",
+                        headers: headers
+                    });
+                }
+
+                function deletePackageVersion(button) {
+                    var packageId = button.getAttribute("data-package-id");
+                    var packageVersion = button.getAttribute("data-package-version");
+                    var label = packageId + " " + packageVersion;
+                    var packageVersionCount = document.querySelectorAll(".js-delete-package-version").length;
+
+                    if (!window.confirm("Delete package version " + label + "?")) {
+                        return;
+                    }
+
+                    button.disabled = true;
+
+                    sendDelete(packageId, packageVersion, null)
+                        .then(function (response) {
+                            if (response.status === 204) {
+                                if (packageVersionCount <= 1) {
+                                    window.location.href = "@Url.Page("/Index")";
+                                    return;
+                                }
+
+                                window.location.reload();
+                                return;
+                            }
+
+                            if (response.status !== 401) {
+                                throw new Error("Delete failed with status " + response.status + ".");
+                            }
+
+                            var apiKey = window.prompt("API key required. Enter API key:");
+                            if (!apiKey) {
+                                throw new Error("Delete canceled.");
+                            }
+
+                            return sendDelete(packageId, packageVersion, apiKey).then(function (retryResponse) {
+                                if (retryResponse.status === 204) {
+                                    if (packageVersionCount <= 1) {
+                                        window.location.href = "@Url.Page("/Index")";
+                                        return;
+                                    }
+
+                                    window.location.reload();
+                                    return;
+                                }
+
+                                if (retryResponse.status === 401) {
+                                    throw new Error("Unauthorized. Check API key and permissions.");
+                                }
+
+                                if (retryResponse.status === 404) {
+                                    throw new Error("Package version was not found.");
+                                }
+
+                                throw new Error("Delete failed with status " + retryResponse.status + ".");
+                            });
+                        })
+                        .catch(function (error) {
+                            if (error.message !== "Delete canceled.") {
+                                window.alert(error.message);
+                            }
+                        })
+                        .finally(function () {
+                            button.disabled = false;
+                        });
+                }
+
+                document.querySelectorAll(".js-delete-package-version").forEach(function (button) {
+                    button.addEventListener("click", function () {
+                        deletePackageVersion(button);
+                    });
+                });
+            })();
+        </script>
+    }
 }
 
 @functions {

@@ -119,6 +119,18 @@ else
                         @package.PackageId
                     </a>
                     <span>by: @string.Join(", ", package.Authors)</span>
+
+                    @if (Model.CanDeletePackages)
+                    {
+                        <button type="button"
+                                class="btn btn-link btn-xs text-danger pull-right js-delete-package"
+                                data-package-id="@package.PackageId"
+                                data-package-version="@package.Version"
+                                title="Delete package"
+                                aria-label="Delete package">
+                            <i class="ms-Icon ms-Icon--Delete" aria-hidden="true"></i>
+                        </button>
+                    }
                 </div>
                 <ul class="info">
                     <li>
@@ -169,6 +181,85 @@ else
             </ul>
         </nav>
     }
+}
+
+@section Scripts
+{
+    <script>
+        (function () {
+            function sendDelete(packageId, packageVersion, apiKey) {
+                var deleteUrl = "/api/v2/package/" +
+                    encodeURIComponent(packageId) + "/" +
+                    encodeURIComponent(packageVersion);
+                var headers = apiKey ? { "X-NuGet-ApiKey": apiKey } : {};
+
+                return window.fetch(deleteUrl, {
+                    method: "DELETE",
+                    headers: headers
+                });
+            }
+
+            function deletePackage(button) {
+                var packageId = button.getAttribute("data-package-id");
+                var packageVersion = button.getAttribute("data-package-version");
+                var packageLabel = packageId + " " + packageVersion;
+
+                if (!window.confirm("Delete package " + packageLabel + "?")) {
+                    return;
+                }
+
+                button.disabled = true;
+
+                sendDelete(packageId, packageVersion, null)
+                    .then(function (response) {
+                        if (response.status === 204) {
+                            window.location.reload();
+                            return;
+                        }
+
+                        if (response.status !== 401) {
+                            throw new Error("Delete failed with status " + response.status + ".");
+                        }
+
+                        var apiKey = window.prompt("API key required. Enter API key:");
+                        if (!apiKey) {
+                            throw new Error("Delete canceled.");
+                        }
+
+                        return sendDelete(packageId, packageVersion, apiKey).then(function (retryResponse) {
+                            if (retryResponse.status === 204) {
+                                window.location.reload();
+                                return;
+                            }
+
+                            if (retryResponse.status === 401) {
+                                throw new Error("Unauthorized. Check API key and permissions.");
+                            }
+
+                            if (retryResponse.status === 404) {
+                                throw new Error("Package version was not found.");
+                            }
+
+                            throw new Error("Delete failed with status " + retryResponse.status + ".");
+                        });
+                    })
+                    .catch(function (error) {
+                        if (error.message !== "Delete canceled.") {
+                            window.alert(error.message);
+                        }
+                    })
+                    .finally(function () {
+                        button.disabled = false;
+                    });
+            }
+
+            document.querySelectorAll(".js-delete-package").forEach(function (button) {
+                button.addEventListener("click", function () {
+                    deletePackage(button);
+                });
+            });
+        })();
+    </script>
 }
 
 @functions {
