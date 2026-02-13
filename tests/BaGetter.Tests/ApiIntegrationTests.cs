@@ -102,6 +102,18 @@ public class ApiIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task IndexPageAuthorQueryReturnsOk()
+    {
+        await _app.AddPackageAsync(_packageStream);
+
+        using var response = await _client.GetAsync("/?q=author:%22Test%20author%22%20TestData");
+        var content = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("TestData", content, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task AutocompleteReturnsOk()
     {
         await _app.AddPackageAsync(_packageStream);

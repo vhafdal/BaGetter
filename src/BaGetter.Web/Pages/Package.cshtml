@@ -271,24 +271,38 @@ else
                 </ul>
             </div>
 
-            @if (Model.Package.Authors.Any())
+            @if (Model.Package.Authors?.Any(a => !string.IsNullOrWhiteSpace(a)) == true)
             {
                 <div>
                     <h2>Authors</h2>
 
-                    <p>@string.Join(", ", Model.Package.Authors)</p>
+                    <p>
+                        @{
+                            var authors = Model.Package.Authors
+                                .Where(a => !string.IsNullOrWhiteSpace(a))
+                                .ToArray();
+                        }
+                        @for (var i = 0; i < authors.Length; i++)
+                        {
+                            if (i > 0)
+                            {
+                                @: , 
+                            }
+                            <a href="@Url.Page("/Index", new { q = FilterQuery("author", authors[i]) })">@authors[i]</a>
+                        }
+                    </p>
                 </div>
             }
 
-            @if (Model.Package.Tags.Any())
+            @if (Model.Package.Tags?.Any(t => !string.IsNullOrWhiteSpace(t)) == true)
             {
                 <div>
                     <h2>Tags</h2>
 
                     <p>
-                        @foreach(var tag in Model.Package.Tags)
+                        @foreach(var tag in Model.Package.Tags.Where(t => !string.IsNullOrWhiteSpace(t)))
                         {
-                            <span class="tag">@tag</span>
+                            <a class="tag" href="@Url.Page("/Index", new { q = FilterQuery("tag", tag) })">@tag</a>
                         }
                     </p>
                 </div>
@@ -462,5 +476,17 @@ else
 
         <div x-show="expanded">@template(null)</div>
         </div>
+    }
+
+    private static string FilterQuery(string prefix, string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return $"{prefix}:";
+        }
+
+        return value.Any(char.IsWhiteSpace)
+            ? $"{prefix}:\"{value}\""
+            : $"{prefix}:{value}";
     }
 }
