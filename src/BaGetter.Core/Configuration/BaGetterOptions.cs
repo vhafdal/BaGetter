@@ -101,6 +101,8 @@ public class BaGetterOptions : IValidatableObject
 
     public SecurityHeadersOptions SecurityHeaders { get; set; } = new();
 
+    public LocalizationOptions Localization { get; set; } = new();
+
     public SearchReindexOptions Reindex { get; set; } = new();
 
     public NugetAuthenticationOptions Authentication { get; set; }

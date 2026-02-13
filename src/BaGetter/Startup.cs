@@ -1,8 +1,11 @@
 using System;
+using System.Globalization;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Threading.RateLimiting;
 using BaGetter.Authentication;
 using BaGetter.Core;
+using BaGetter.Core.Configuration;
 using BaGetter.Core.Extensions;
 using BaGetter.Tencent;
 using BaGetter.Web;
@@ -14,6 +17,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -149,6 +153,36 @@ public class Startup
         }
 
         app.UseSecurityHeadersMiddleware();
+        if (options.Localization?.Enabled == true)
+        {
+            app.Use(async (context, next) =>
+            {
+                if (string.Equals(context.Request.Query["clearCulture"], "1", StringComparison.OrdinalIgnoreCase))
+                {
+                    context.Response.Cookies.Delete(CookieRequestCultureProvider.DefaultCookieName);
+                    await next();
+                    return;
+                }
+
+                var requestedCulture = context.Request.Query["culture"].ToString();
+                var requestedUiCulture = context.Request.Query["ui-culture"].ToString();
+                var selectedCulture = string.IsNullOrWhiteSpace(requestedUiCulture) ? requestedCulture : requestedUiCulture;
+
+                if (!string.IsNullOrWhiteSpace(selectedCulture))
+                {
+                    var normalizedCulture = NormalizeSupportedCulture(selectedCulture);
+                    if (!string.IsNullOrWhiteSpace(normalizedCulture))
+                    {
+                        var cookieValue = CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(normalizedCulture));
+                        context.Response.Cookies.Append(CookieRequestCultureProvider.DefaultCookieName, cookieValue);
+                    }
+                }
+
+                await next();
+            });
+
+            app.UseRequestLocalization(BuildRequestLocalizationOptions(options.Localization));
+        }
         app.UseResponseCompression();
         app.UseStaticFiles();
         app.UseAuthentication();
@@ -179,5 +213,138 @@ public class Startup
                 Predicate = check => check.IsConfigured(options)
             }
         );
+    }
+
+    private static RequestLocalizationOptions BuildRequestLocalizationOptions(LocalizationOptions options)
+    {
+        options ??= new LocalizationOptions();
+
+        var supportedCultures = LocalizationOptions.SupportedCultures
+            .Select(c => new CultureInfo(c))
+            .ToList();
+
+        var defaultCultureName = string.IsNullOrWhiteSpace(options.DefaultCulture)
+            ? "en-US"
+            : options.DefaultCulture;
+
+        var defaultCulture = supportedCultures.FirstOrDefault(c =>
+                                 string.Equals(c.Name, defaultCultureName, StringComparison.OrdinalIgnoreCase))
+                             ?? supportedCultures[0];
+
+        var requestLocalizationOptions = new RequestLocalizationOptions
+        {
+            DefaultRequestCulture = new RequestCulture(defaultCulture),
+            SupportedCultures = supportedCultures,
+            SupportedUICultures = supportedCultures,
+            FallBackToParentCultures = true,
+            FallBackToParentUICultures = true,
+            ApplyCurrentCultureToResponseHeaders = true,
+        };
+
+        requestLocalizationOptions.RequestCultureProviders = new IRequestCultureProvider[]
+        {
+            new QueryStringRequestCultureProvider(),
+            new CookieRequestCultureProvider(),
+            new CustomRequestCultureProvider(context =>
+            {
+                var header = context.Request.Headers.AcceptLanguage.ToString();
+                if (string.IsNullOrWhiteSpace(header))
+                {
+                    return Task.FromResult<ProviderCultureResult>(null);
+                }
+
+                var firstLanguage = header.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(static x => x.Split(';', StringSplitOptions.RemoveEmptyEntries)[0].Trim())
+                    .FirstOrDefault();
+
+                if (string.IsNullOrWhiteSpace(firstLanguage))
+                {
+                    return Task.FromResult<ProviderCultureResult>(null);
+                }
+
+                var normalizedCulture = NormalizeSupportedCulture(firstLanguage);
+                return Task.FromResult(string.IsNullOrWhiteSpace(normalizedCulture)
+                    ? null
+                    : new ProviderCultureResult(normalizedCulture, normalizedCulture));
+            }),
+            new AcceptLanguageHeaderRequestCultureProvider(),
+        };
+
+        return requestLocalizationOptions;
+    }
+
+    private static string NormalizeSupportedCulture(string culture)
+    {
+        if (string.IsNullOrWhiteSpace(culture))
+        {
+            return null;
+        }
+
+        if (culture.StartsWith("is", StringComparison.OrdinalIgnoreCase))
+        {
+            return "is-IS";
+        }
+
+        if (culture.StartsWith("en", StringComparison.OrdinalIgnoreCase))
+        {
+            return "en-US";
+        }
+
+        if (culture.StartsWith("da", StringComparison.OrdinalIgnoreCase))
+        {
+            return "da-DK";
+        }
+
+        if (culture.StartsWith("sv", StringComparison.OrdinalIgnoreCase))
+        {
+            return "sv-SE";
+        }
+
+        if (culture.StartsWith("nb", StringComparison.OrdinalIgnoreCase) ||
+            culture.StartsWith("nn", StringComparison.OrdinalIgnoreCase) ||
+            culture.StartsWith("no", StringComparison.OrdinalIgnoreCase))
+        {
+            return "nb-NO";
+        }
+
+        if (culture.StartsWith("pl", StringComparison.OrdinalIgnoreCase))
+        {
+            return "pl-PL";
+        }
+
+        if (culture.StartsWith("fi", StringComparison.OrdinalIgnoreCase))
+        {
+            return "fi-FI";
+        }
+
+        if (culture.StartsWith("es", StringComparison.OrdinalIgnoreCase))
+        {
+            return "es-ES";
+        }
+
+        if (culture.StartsWith("pt", StringComparison.OrdinalIgnoreCase))
+        {
+            return "pt-PT";
+        }
+
+        if (culture.StartsWith("it", StringComparison.OrdinalIgnoreCase))
+        {
+            return "it-IT";
+        }
+
+        if (culture.StartsWith("zh", StringComparison.OrdinalIgnoreCase))
+        {
+            return "zh-CN";
+        }
+
+        if (culture.StartsWith("fr", StringComparison.OrdinalIgnoreCase))
+        {
+            return "fr-FR";
+        }
+
+        return LocalizationOptions.SupportedCultures.Any(s =>
+            string.Equals(s, culture, StringComparison.OrdinalIgnoreCase))
+            ? culture
+            : null;
     }
 }
