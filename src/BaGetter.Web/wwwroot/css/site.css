@@ -233,6 +233,13 @@ p {
   border-bottom: 2px solid var(--brand-highlight);
 }
 
+.language-flag {
+  display: inline-block;
+  min-width: 1.4em;
+  margin-right: 6px;
+  text-align: center;
+}
+
 .search-container {
   padding-top: 12px;
   padding-bottom: 16px;
