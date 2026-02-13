@@ -118,7 +118,29 @@ else
                        class="package-title">
                         @package.PackageId
                     </a>
-                    <span>by: @string.Join(", ", package.Authors)</span>
+                    @{
+                        var authors = (package.Authors ?? Array.Empty<string>())
+                            .Where(a => !string.IsNullOrWhiteSpace(a))
+                            .ToArray();
+                    }
+                    <span>
+                        by:
+                        @if (authors.Length == 0)
+                        {
+                            @: unknown
+                        }
+                        else
+                        {
+                            for (var i = 0; i < authors.Length; i++)
+                            {
+                                if (i > 0)
+                                {
+                                    @: , 
+                                }
+                                <a href="@SearchLink(query: FilterQuery("author", authors[i]), page: 1)">@authors[i]</a>
+                            }
+                        }
+                    </span>
 
                     @if (Model.CanDeletePackages)
                     {
@@ -145,12 +167,15 @@ else
                             Latest version: @package.Version
                         </span>
                     </li>
-                    @if (package.Tags.Any())
+                    @if (package.Tags?.Any() == true)
                     {
                         <li>
                             <span class="tags">
                                 <i class="ms-Icon ms-Icon--Tag"></i>
-                                @string.Join(" ", package.Tags)
+                                @foreach (var tag in package.Tags.Where(t => !string.IsNullOrWhiteSpace(t)))
+                                {
+                                    <a href="@SearchLink(query: FilterQuery("tag", tag), page: 1)">@tag</a>@: 
+                                }
                             </span>
                         </li>
                     }
@@ -330,12 +355,14 @@ else
     };
 
     private string SearchLink(
+        string query = null,
         string packageType = null,
         string framework = null,
         bool? prerelease = null,
         int? page = null)
     {
         // Use model's value if the argument was skipped.
+        query = query ?? Model.Query;
         packageType = packageType ?? Model.PackageType;
         framework = framework ?? Model.Framework;
         prerelease = prerelease ?? Model.Prerelease;
@@ -349,11 +376,23 @@ else
 
         return Url.Page("Index", new
         {
-            q = Model.Query,
+            q = query,
             p = page,
             packageType,
             framework,
             prerelease,
         });
+    }
+
+    private static string FilterQuery(string prefix, string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return $"{prefix}:";
+        }
+
+        return value.Any(char.IsWhiteSpace)
+            ? $"{prefix}:\"{value}\""
+            : $"{prefix}:{value}";
     }
 }
