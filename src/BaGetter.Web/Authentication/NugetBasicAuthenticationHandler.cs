@@ -76,7 +76,22 @@ public class NugetBasicAuthenticationHandler : AuthenticationHandler<Authenticat
 
     private Task<AuthenticateResult> CreateUserAuthenticatonResult(string username)
     {
-        Claim[] claims = [new Claim(ClaimTypes.Name, username)];
+        var claims = new System.Collections.Generic.List<Claim>
+        {
+            new Claim(ClaimTypes.Name, username)
+        };
+
+        var credential = bagetterOptions.Value.Authentication?.Credentials?
+            .FirstOrDefault(c => string.Equals(c.Username, username, StringComparison.OrdinalIgnoreCase));
+
+        foreach (var role in credential?.Roles ?? [])
+        {
+            if (!string.IsNullOrWhiteSpace(role))
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role.Trim()));
+            }
+        }
+
         var identity = new ClaimsIdentity(claims, Scheme.Name);
         var principal = new ClaimsPrincipal(identity);
 

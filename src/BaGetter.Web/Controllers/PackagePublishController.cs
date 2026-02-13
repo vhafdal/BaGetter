@@ -129,7 +129,9 @@ public class PackagePublishController : Controller
             return NotFound();
         }
 
-        if (!await _authentication.AuthenticateAsync(Request.GetApiKey(), cancellationToken))
+        var isAdminUser = HttpContext.User?.IsInRole("Admin") == true;
+        var hasValidApiKey = await _authentication.AuthenticateAsync(Request.GetApiKey(), cancellationToken);
+        if (!isAdminUser && !hasValidApiKey)
         {
             _logger.LogWarning(
                 "AUDIT package_delete_denied reason=unauthorized package_id={PackageId} package_version={PackageVersion} actor={Actor} ip={IpAddress}",
