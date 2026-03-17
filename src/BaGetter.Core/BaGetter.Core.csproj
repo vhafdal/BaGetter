@@ -14,6 +14,7 @@
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
     <PackageReference Include="NuGet.Protocol" />
+    <PackageReference Include="System.DirectoryServices.Protocols" />
   </ItemGroup>
 
   <ItemGroup>
