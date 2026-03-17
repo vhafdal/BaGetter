@@ -52,6 +52,7 @@ For more information, please refer to the [documentation].
 * **ARM** (64bit) **support**. You can host your NuGets on a device like Raspberry Pi!
 * **Cloud native**: supports [Docker][Docker doc link], [AWS][AWS doc link], [Google Cloud][GCP doc link], [Alibaba Cloud][Aliyun doc link]，[Tencent Cloud][Tencent doc link]
 * **Offline support**: [Mirror a NuGet server][Read through caching] to speed up builds and enable offline downloads
+* **Private feed authentication**: supports local users, API keys, and LDAP / Active Directory-backed feed access
 * **Operational readiness**: supports ETag-based HTTP caching, response compression, request rate limiting, security headers, and audit logging for package mutations
 * **Search recovery tooling**: supports manual and background search reindexing
 

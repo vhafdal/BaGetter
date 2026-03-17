@@ -99,6 +99,8 @@ public static partial class DependencyInjectionExtensions
         services.TryAddScoped<DownloadsImporter>();
 
         services.TryAddTransient<IAuthenticationService, ApiKeyAuthenticationService>();
+        services.TryAddEnumerable(ServiceDescriptor.Transient<INugetCredentialValidator, ConfiguredCredentialValidator>());
+        services.TryAddEnumerable(ServiceDescriptor.Transient<INugetCredentialValidator, LdapCredentialValidator>());
         services.TryAddTransient<IPackageContentService, DefaultPackageContentService>();
         services.TryAddTransient<IPackageDeletionService, PackageDeletionService>();
         services.TryAddTransient<IPackageIndexingService, PackageIndexingService>();

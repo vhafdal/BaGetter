@@ -157,6 +157,39 @@ public class BaGetterOptions : IValidatableObject
                 new[] { nameof(SecurityHeaders) });
         }
 
+        if (Authentication?.Ldap?.Enabled == true)
+        {
+            if (string.IsNullOrWhiteSpace(Authentication.Ldap.Server))
+            {
+                yield return new ValidationResult(
+                    $"{nameof(Authentication)}.{nameof(NugetAuthenticationOptions.Ldap)}.{nameof(LdapAuthenticationOptions.Server)} is required when LDAP authentication is enabled.",
+                    [nameof(Authentication)]);
+            }
+
+            if (string.IsNullOrWhiteSpace(Authentication.Ldap.BaseDn))
+            {
+                yield return new ValidationResult(
+                    $"{nameof(Authentication)}.{nameof(NugetAuthenticationOptions.Ldap)}.{nameof(LdapAuthenticationOptions.BaseDn)} is required when LDAP authentication is enabled.",
+                    [nameof(Authentication)]);
+            }
+
+            var hasBindDn = !string.IsNullOrWhiteSpace(Authentication.Ldap.BindDn);
+            var hasBindPassword = !string.IsNullOrWhiteSpace(Authentication.Ldap.BindPassword);
+            if (hasBindDn != hasBindPassword)
+            {
+                yield return new ValidationResult(
+                    $"{nameof(Authentication)}.{nameof(NugetAuthenticationOptions.Ldap)} requires both {nameof(LdapAuthenticationOptions.BindDn)} and {nameof(LdapAuthenticationOptions.BindPassword)} when either is configured.",
+                    [nameof(Authentication)]);
+            }
+
+            if (Authentication.Ldap.Port is <= 0 or > 65535)
+            {
+                yield return new ValidationResult(
+                    $"{nameof(Authentication)}.{nameof(NugetAuthenticationOptions.Ldap)}.{nameof(LdapAuthenticationOptions.Port)} must be between 1 and 65535 when set.",
+                    [nameof(Authentication)]);
+            }
+        }
+
         var mirrors = GetConfiguredMirrors();
         var useMirrorList = Mirrors is { Count: > 0 };
         for (var i = 0; i < mirrors.Count; i++)

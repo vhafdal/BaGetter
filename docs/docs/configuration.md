@@ -355,6 +355,51 @@ dotnet run --project src/BaGetter -- hash "password"
 
 Users will now have to provide the username and password to fetch and download packages.
 
+### LDAP / Active Directory authentication
+
+BaGetter can also validate package feed credentials against LDAP or Active Directory.
+Configure LDAP under `Authentication.Ldap`. You can keep `Authentication.Credentials`
+configured at the same time to preserve local fallback accounts for administration or
+break-glass access.
+
+```json
+{
+    "Authentication": {
+        "Credentials": [
+            {
+                "Username": "local-admin",
+                "PasswordHash": "PBKDF2$100000$<salt>$<hash>",
+                "Roles": [ "Admin" ]
+            }
+        ],
+        "Ldap": {
+            "Enabled": true,
+            "Server": "ad.example.local",
+            "BaseDn": "dc=example,dc=local",
+            "BindDn": "cn=bagetter,ou=Service Accounts,dc=example,dc=local",
+            "BindPassword": "change-me",
+            "UseSsl": true,
+            "AllowedGroups": [ "NuGet Readers", "NuGet Admins" ]
+        }
+    }
+}
+```
+
+LDAP users can authenticate with:
+
+- `domain\username`
+- `username@domain.example`
+
+Configuration notes:
+
+- `Authentication.Ldap.Server` and `Authentication.Ldap.BaseDn` are required when LDAP is enabled.
+- `Authentication.Ldap.BindDn` and `Authentication.Ldap.BindPassword` are recommended for Active Directory because most environments do not allow anonymous directory searches.
+- BaGetter adds role claims from the LDAP / Active Directory groups returned for the user. Group names are taken from each group's `CN`.
+- If `Authentication.Ldap.AllowedGroups` is set, login succeeds only when the user belongs to at least one of those group names.
+- If `Authentication.Ldap.AllowedGroups` is omitted or empty, no group filter is applied.
+- `Authentication.Ldap.UseSsl` defaults to `true`. Use LDAPS whenever possible.
+- BaGetter uses `System.DirectoryServices.Protocols`, which is cross-platform. On Linux and macOS, make sure the host trusts your LDAP server's certificate chain when using LDAPS.
+
 How to add private nuget feed:
 
 1. Download the latest NuGet executable.
@@ -382,6 +427,13 @@ The commands are slightly different when using the Package Manager console in Vi
 
 ```shell
 dotnet nuget add source "http://localhost:5000/v3/index.json" --name "bagetter" --username "username" --password "password"
+```
+
+The same commands work for LDAP-backed feeds. Replace the username and password with your
+directory credentials, for example:
+
+```shell
+dotnet nuget add source "http://localhost:5000/v3/index.json" --name "bagetter" --username "hysing\\valdi" --password "password"
 ```
 
 ## Database configuration
