@@ -240,9 +240,7 @@ public static partial class DependencyInjectionExtensions
     private static IUpstreamClient UpstreamClientFactory(IServiceProvider provider)
     {
         var rootOptions = provider.GetRequiredService<IOptionsSnapshot<BaGetterOptions>>().Value;
-        var mirrors = rootOptions.GetConfiguredMirrors();
-
-        if (mirrors.Count == 0)
+        if (rootOptions.Mirrors is not { Count: > 0 })
         {
             var legacyOptions = provider.GetRequiredService<IOptionsSnapshot<MirrorOptions>>().Value;
             return legacyOptions.Enabled switch
@@ -254,7 +252,7 @@ public static partial class DependencyInjectionExtensions
         }
 
         var enabledMirrors = new List<IUpstreamClient>();
-        foreach (var mirror in mirrors)
+        foreach (var mirror in rootOptions.Mirrors)
         {
             if (mirror?.Enabled != true)
             {
