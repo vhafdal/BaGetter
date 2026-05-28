@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Threading.RateLimiting;
 using BaGetter.Authentication;
@@ -41,7 +42,7 @@ public class Startup
         services.ConfigureOptions<ValidateBaGetterOptions>();
         services.ConfigureOptions<ConfigureBaGetterServer>();
 
-        services.AddBaGetterOptions<IISServerOptions>(nameof(IISServerOptions));
+        AddWindowsIisServerOptions(services);
         services.AddBaGetterWebApplication(ConfigureBaGetterApplication);
 
         // You can swap between implementations of subsystems like storage and search using BaGetter's configuration.
@@ -107,6 +108,47 @@ public class Startup
                 });
             });
         });
+    }
+
+    private static void AddWindowsIisServerOptions(IServiceCollection services)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var optionsType = Type.GetType("Microsoft.AspNetCore.Builder.IISServerOptions, Microsoft.AspNetCore.Server.IIS");
+        if (optionsType == null)
+        {
+            return;
+        }
+
+        var method = typeof(Startup)
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .Single(m => m.Name == nameof(AddWindowsIisServerOptions) && m.IsGenericMethodDefinition)
+            .MakeGenericMethod(optionsType);
+
+        method.Invoke(null, new object[] { services });
+    }
+
+    private static void AddWindowsIisServerOptions<TOptions>(IServiceCollection services)
+        where TOptions : class
+    {
+        services.AddSingleton<IConfigureOptions<TOptions>>(provider =>
+        {
+            var baGetterOptions = provider.GetRequiredService<IOptions<BaGetterOptions>>();
+            return new ConfigureNamedOptions<TOptions>(
+                Options.DefaultName,
+                options =>
+                {
+                    var maxRequestBodySize = typeof(TOptions).GetProperty("MaxRequestBodySize");
+                    maxRequestBodySize?.SetValue(
+                        options,
+                        (long)baGetterOptions.Value.MaxPackageSizeGiB * int.MaxValue / 2);
+                });
+        });
+
+        services.AddBaGetterOptions<TOptions>("IISServerOptions");
     }
 
     private void ConfigureBaGetterApplication(BaGetterApplication app)
