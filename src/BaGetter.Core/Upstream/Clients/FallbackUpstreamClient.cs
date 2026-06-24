@@ -10,7 +10,11 @@ using NuGet.Versioning;
 namespace BaGetter.Core;
 
 /// <summary>
-/// Tries multiple upstream clients in order until one returns a result.
+/// Aggregates multiple upstream clients. Version/metadata listings are UNIONED across
+/// every upstream (so a package present on several feeds contributes all its versions
+/// and no single feed can shadow another — e.g. nuget.org's stale Hangfire.Throttling
+/// 1.0.0-beta1 must not hide the licensed feed's 1.4.3). Downloads use the first
+/// upstream that has the requested package.
 /// </summary>
 public sealed class FallbackUpstreamClient : IUpstreamClient, IDisposable
 {
@@ -32,14 +36,14 @@ public sealed class FallbackUpstreamClient : IUpstreamClient, IDisposable
 
     public async Task<IReadOnlyList<NuGetVersion>> ListPackageVersionsAsync(string id, CancellationToken cancellationToken)
     {
+        var versions = new HashSet<NuGetVersion>();
         foreach (var client in _clients)
         {
             try
             {
-                var versions = await client.ListPackageVersionsAsync(id, cancellationToken);
-                if (versions.Count > 0)
+                foreach (var version in await client.ListPackageVersionsAsync(id, cancellationToken))
                 {
-                    return versions;
+                    versions.Add(version);
                 }
             }
             catch (Exception e)
@@ -48,19 +52,24 @@ public sealed class FallbackUpstreamClient : IUpstreamClient, IDisposable
             }
         }
 
-        return Array.Empty<NuGetVersion>();
+        return versions.ToList();
     }
 
     public async Task<IReadOnlyList<Package>> ListPackagesAsync(string id, CancellationToken cancellationToken)
     {
+        // Union metadata across all upstreams, deduped by version. Earlier (higher
+        // priority) upstreams win for a version present on more than one feed.
+        var byVersion = new Dictionary<NuGetVersion, Package>();
         foreach (var client in _clients)
         {
             try
             {
-                var packages = await client.ListPackagesAsync(id, cancellationToken);
-                if (packages.Count > 0)
+                foreach (var package in await client.ListPackagesAsync(id, cancellationToken))
                 {
-                    return packages;
+                    if (!byVersion.ContainsKey(package.Version))
+                    {
+                        byVersion[package.Version] = package;
+                    }
                 }
             }
             catch (Exception e)
@@ -69,7 +78,7 @@ public sealed class FallbackUpstreamClient : IUpstreamClient, IDisposable
             }
         }
 
-        return Array.Empty<Package>();
+        return byVersion.Values.ToList();
     }
 
     public async Task<Stream> DownloadPackageOrNullAsync(string id, NuGetVersion version, CancellationToken cancellationToken)
