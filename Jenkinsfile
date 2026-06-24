@@ -113,8 +113,10 @@ spec:
                             echo "$REG_PASS" | docker login "$REGISTRY_HOST" -u "$REG_USER" --password-stdin
                             # The fork Dockerfile takes the build-time version via --build-arg Version.
                             # BuildKit auto-populates TARGETARCH (the Dockerfile builds for it).
+                            # Image tag is VERSION (sha-* or override); the assembly Version
+                            # build-arg must be valid semver, so fall back to 1.0.0 for sha builds.
                             docker build \
-                              --build-arg Version="${VERSION#sha-}" \
+                              --build-arg Version="${VERSION_OVERRIDE:-1.0.0}" \
                               -t "$IMAGE:$VERSION" \
                               -t "$IMAGE:latest" \
                               .
