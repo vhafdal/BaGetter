@@ -1,56 +1,71 @@
 ---
-# Production values for the devop BaGetter mirror (nuget.devop.is), deployed by the
-# repo Jenkinsfile via Jenkins + Harbor + Helm. The image repository/tag are set by
-# the pipeline with --set; everything else lives here.
+# Production values for the devop BaGetter mirror (nuget.devop.is). Faithfully
+# reproduces the live deployment (now on PostgreSQL) so Helm can take it over.
+# image.repository/tag are set by the Jenkinsfile via --set.
 #
-# VERIFY BEFORE THE FIRST PROD DEPLOY (the live release was NOT Helm-managed):
-#   - Database__ConnectionString path must match the running pod so the existing
-#     SQLite DB/cache isn't orphaned (the fork image defaults to /data/db/bagetter.db).
-#     Once we migrate to PostgreSQL this becomes a Postgres connection string instead.
-#   - The real ApiKey is in the `bagetter-secret` Secret, not committed here.
-#   - The Harbor pull secret `nexus-registry` (robot$k8s-pull) must exist in the ns.
-
-configMaps:
-  bagetter-env:
-    data:
-      Storage__Type: "FileSystem"
-      Storage__Path: "/data"
-      Database__Type: "Sqlite"
-      # Matches the fork image default. TODO(postgres): switch Type=PostgreSql and
-      # point ConnectionString at the Postgres service to fix concurrent-write locking.
-      Database__ConnectionString: "Data Source=/data/db/bagetter.db"
-      Search__Type: "Database"
+# Required in the namespace (NOT created by this chart):
+#   secret bagetter-secret : api-key, user-valdi-password, user-nexer-password
+#   secret bagetter-db     : connstring (PostgreSQL DSN)
+#   secret bagetter-mirror : Mirrors__N__* upstreams (0 hangfire-pro, 1 hangfire-ace, 2 nuget.org)
+#   secret bagetter-tls    : TLS cert for nuget.devop.is
+#   secret nexus-registry  : Harbor pull secret (robot$k8s-pull)
+#   the Postgres StatefulSet from ../../postgres.yaml
+#   PVC bagetter-data (existing)
 
 controllers:
   bagetter:
     pod:
-      # Private Harbor (registry.devop.is/nexus) requires a pull secret in this ns.
       imagePullSecrets:
         - name: nexus-registry
     containers:
       bagetter:
         image:
-          # repository/tag are overridden by the pipeline (--set ...image.repository/tag).
           repository: registry.devop.is/nexus/bagetter
           tag: latest
           pullPolicy: IfNotPresent
+        env:
+          ASPNETCORE_URLS: "http://+:8080"
+          Storage__Type: FileSystem
+          Storage__Path: /data/packages
+          Search__Type: Database
+          Database__Type: PostgreSql
+          Database__ConnectionString:
+            valueFrom:
+              secretKeyRef:
+                name: bagetter-db
+                key: connstring
+          # Vestigial single-mirror setting; superseded by the Mirrors__* array
+          # (from the bagetter-mirror secret) but kept to match the live config.
+          Mirror__Enabled: "true"
+          Mirror__PackageSource: "https://api.nuget.org/v3/index.json"
+          ApiKey:
+            valueFrom:
+              secretKeyRef:
+                name: bagetter-secret
+                key: api-key
+          Authentication__Credentials__0__Username: valdi
+          Authentication__Credentials__0__Roles__0: Admin
+          Authentication__Credentials__0__Password:
+            valueFrom:
+              secretKeyRef:
+                name: bagetter-secret
+                key: user-valdi-password
+          Authentication__Credentials__1__Username: nexer.usr
+          Authentication__Credentials__1__Password:
+            valueFrom:
+              secretKeyRef:
+                name: bagetter-secret
+                key: user-nexer-password
         envFrom:
-          - configMapRef:
-              name: bagetter-bagetter-env
-          # ApiKey + any other sensitive app settings.
-          - secretRef:
-              name: bagetter-secret
-              optional: true
-          # Read-through upstream mirrors (slot 0 hangfire-pro, 1 hangfire-ace, 2 nuget.org).
+          # Read-through upstream mirrors: slot0 hangfire-pro, slot1 hangfire-ace,
+          # slot2 nuget.org (all Mirrors__N__* keys load as env vars).
           - secretRef:
               name: bagetter-mirror
-              optional: true
         resources:
           requests:
             cpu: 100m
             memory: 256Mi
           limits:
-            # Bumped from the chart default for read-through caching headroom.
             memory: 768Mi
         securityContext:
           allowPrivilegeEscalation: false
@@ -69,7 +84,7 @@ service:
 ingress:
   bagetter-ingress:
     enabled: true
-    className: "traefik"
+    className: traefik
     hosts:
       - host: nuget.devop.is
         paths:
@@ -85,7 +100,6 @@ ingress:
 persistence:
   bagetter-data:
     enabled: true
-    # Bind to the existing PVC so the cached packages survive the migration.
     existingClaim: bagetter-data
     globalMounts:
-      - path: "/data"
+      - path: /data
